@@ -1,0 +1,6 @@
+{"ts":"2026-08-13T17:31:23.991949416+09:00","event":"SessionStart","handler":"*hook.sessionStartHandler","duration_ms":18,"session_id":"7d60c564-7355-480d-acc5-9c1541c98fa3"}
+{"ts":"2026-08-13T17:31:24.010805417+09:00","event":"SessionStart","handler":"*hook.autoUpdateHandler","duration_ms":0,"session_id":"7d60c564-7355-480d-acc5-9c1541c98fa3"}
+{"ts":"2026-08-13T17:31:24.220083334+09:00","event":"InstructionsLoaded","handler":"*hook.instructionsLoadedHandler","duration_ms":0,"session_id":"7d60c564-7355-480d-acc5-9c1541c98fa3"}
+{"ts":"2026-08-13T17:31:24.235999542+09:00","event":"InstructionsLoaded","handler":"*hook.instructionsLoadedHandler","duration_ms":0,"session_id":"7d60c564-7355-480d-acc5-9c1541c98fa3"}
+{"ts":"2026-08-13T17:44:14.189408+09:00","event":"PostToolUse","handler":"*hook.postToolHandler","tool":"Write","duration_ms":0,"session_id":"7d60c564-7355-480d-acc5-9c1541c98fa3"}
+{"ts":"2026-08-13T17:51:46.212872083+09:00","event":"PreToolUse","handler":"*hook.preToolHandler","tool":"Bash","duration_ms":0,"decision":"allow","session_id":"7d60c564-7355-480d-acc5-9c1541c98fa3"}

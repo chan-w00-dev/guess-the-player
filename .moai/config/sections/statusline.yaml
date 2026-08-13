@@ -1,0 +1,19 @@
+statusline:
+    segments:
+        cache_hit: false
+        claude_version: false
+        context: true
+        directory: true
+        effort_thinking: true
+        git_branch: true
+        git_status: false
+        moai_version: false
+        model: true
+        output_style: false
+        pr: false
+        session_time: true
+        task: true
+        usage_5h: true
+        usage_7d: false
+        worktree: true
+    theme: catppuccin-mocha
