@@ -20,9 +20,26 @@ export interface SquadNumberEntry {
   squadNumber: number;
 }
 
+/**
+ * Minimal select-after-update query-builder surface `update.ts` needs.
+ *
+ * Postgrest's `.update()` resolves `{ error: null }` whenever the query
+ * itself executes successfully — regardless of whether the `where` clause
+ * actually matched any row. Chaining `.select("id")` after `.eq(...)` is the
+ * standard Postgrest/Supabase pattern for getting the updated rows back:
+ * `data` is the array of rows that were actually updated, so an empty array
+ * (with `error: null`) means zero rows matched — the only way to detect a
+ * mistyped/nonexistent `id` (REQ-SYNC-004 unmatched-id reporting).
+ */
+export interface SquadNumberSelectQueryBuilder {
+  select(
+    columns: "id",
+  ): PromiseLike<{ data: { id: number }[] | null; error: { message: string } | null }>;
+}
+
 /** Minimal update-then-filter query-builder surface `update.ts` needs. */
 export interface SquadNumberUpdateQueryBuilder {
-  eq(column: "id", value: number): PromiseLike<{ error: { message: string } | null }>;
+  eq(column: "id", value: number): SquadNumberSelectQueryBuilder;
 }
 
 /** Minimal update-only table-handle surface `update.ts` needs. */

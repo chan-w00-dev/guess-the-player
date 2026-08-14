@@ -11,6 +11,7 @@ export {
 } from "./supabase-adapter";
 export type {
   SquadNumberEntry,
+  SquadNumberSelectQueryBuilder,
   SquadNumberSupabaseLike,
   SquadNumberTableClient,
   SquadNumberUpdateQueryBuilder,

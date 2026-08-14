@@ -39,9 +39,15 @@ export interface SquadNumberUpdateSummary {
 /**
  * Updates `players.squad_number` for every entry in `entries`, one targeted
  * `update ... where id = ?` per entry (REQ-SYNC-004). Never throws — every
- * per-entry failure (a returned error or a thrown exception) is recorded in
- * the returned summary's `errors` list and the loop continues to the next
- * entry.
+ * per-entry failure (a returned error, a thrown exception, or an id that
+ * matched zero rows) is recorded in the returned summary's `errors` list and
+ * the loop continues to the next entry.
+ *
+ * Chains `.select("id")` after `.eq(...)` specifically to detect the
+ * zero-rows-matched case: Postgrest's `.update()` resolves `{ error: null }`
+ * whenever the query executes successfully, even if the `where id = ?`
+ * clause matched no row (e.g. a mistyped/nonexistent id) — without the
+ * `.select()`, such an entry would be silently miscounted as `updated`.
  *
  * @MX:ANCHOR: [AUTO] runSquadNumberUpdate is the sole write path for the
  * `players.squad_number` column (expected fan_in >= 3 once
@@ -60,14 +66,27 @@ export async function runSquadNumberUpdate({
 
   for (const entry of entries) {
     try {
-      const { error } = await supabase
+      const { data, error } = await supabase
         .from("players")
         .update({ squad_number: entry.squadNumber })
-        .eq("id", entry.id);
+        .eq("id", entry.id)
+        .select("id");
 
       if (error) {
         summary.skipped += 1;
         summary.errors.push(`id=${entry.id}: ${error.message}`);
+        continue;
+      }
+
+      // Postgrest resolves `error: null` whenever the query executes
+      // successfully, regardless of whether `where id = ?` matched any row.
+      // An empty (or null) `data` array is the only signal that zero rows
+      // were actually updated — e.g. a mistyped/nonexistent id.
+      if (!data || data.length === 0) {
+        summary.skipped += 1;
+        summary.errors.push(
+          `id=${entry.id}: no player found with this id — entry skipped, verify the id is correct`,
+        );
         continue;
       }
 
