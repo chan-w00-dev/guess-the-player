@@ -32,7 +32,52 @@ Tier: M (unchanged). Route: Hybrid Trunk main-direct (no branch/worktree, unchan
 
 ## §E.2 Run-phase Evidence
 
-_<pending run-phase>_
+### M1 — Domain Types & Data Model (status: complete)
+
+Not yet AC-verifiable in isolation — every AC in `acceptance.md` §D.1 exercises
+behavior from the comparison engine (M2), player selection (M7), search (M6),
+guess submission (M8), Korean mapping (M5), or the sync job (M4), none of
+which exist yet after M1. This entry records M1 delivery evidence; the AC
+PASS/FAIL matrix is populated progressively as later milestones close it out
+(final table due at M11 close).
+
+**Delivered:**
+- Next.js 16 (App Router) + TypeScript (strict) + Tailwind CSS v4 + Vitest
+  scaffold at repo root: `package.json`, `tsconfig.json`, `next.config.ts`,
+  `eslint.config.mjs`, `postcss.config.mjs`, `vitest.config.ts`,
+  `app/{layout.tsx,page.tsx,globals.css,favicon.ico}`.
+- `types/player.ts` — `Position` (`FW`\|`MF`\|`DF`\|`GK`), `POSITIONS`,
+  `isPosition()` type guard, `Player` (nullable `club`/`nationality`/`age`/
+  `squadNumber` per REQ-COMPARE-007 incomplete-sync-data handling; optional
+  display-only `photo`, not one of the 5 REQ-COMPARE attributes).
+- `types/comparison.ts` — `ComparisonAttribute`/`CATEGORICAL_ATTRIBUTES`/
+  `NUMERIC_ATTRIBUTES` + `isCategoricalAttribute`/`isNumericAttribute` guards,
+  `AttributeComparisonResult` discriminated union (`CategoricalAttributeResult`
+  \| `NumericAttributeResult`) + `isNumericAttributeResult` guard,
+  `ComparisonResult`, `RoundState` + `createInitialRoundState()`,
+  `MAX_ATTEMPTS` (= 8, REQ-GUESS-007), `GuessResult` + `RevealedIdentity`
+  (reveal present only on won/lost, per REQ-GUESS-002/004/005), `KoreanMapping`.
+- `tests/unit/player-types.test.ts` + `tests/unit/comparison-types.test.ts` —
+  37 tests. TDD RED confirmed first (`Cannot find package '@/types/...'`)
+  before writing the GREEN implementation.
+- `.env.local.example` — placeholder env var names only (Supabase URL/anon
+  key, football-data.org API key); no real secret values.
+
+**Self-verification (evidence — see M1 commit for the full command output):**
+
+| Check | Command | Result |
+|---|---|---|
+| Tests | `npx vitest run` | PASS — 2 files, 37 tests, 0 failed |
+| Coverage | `npx vitest run --coverage` | 100% stmts/branches/funcs/lines on `types/**` (10/10 stmts, 2/2 branches, 5/5 funcs, 10/10 lines) — exceeds the 85%/80% quality.yaml thresholds |
+| Type-check | `npx tsc --noEmit` | exit 0 |
+| Lint | `npx eslint .` | exit 0 |
+| Build | `npm run build` | exit 0 — static `/` and `/_not-found` routes |
+
+### AC PASS/FAIL Matrix
+
+_Not yet populated — see the M1 status note above. None of the 29 ACs in
+`acceptance.md` §D.1 are verifiable from types alone; population begins once
+M2 (comparison engine) lands._
 
 ## §E.3 Run-phase Audit-Ready Signal
 
