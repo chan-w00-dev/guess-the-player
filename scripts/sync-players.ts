@@ -7,7 +7,17 @@
  *   1. `supabase/migrations/0001_create_players_table.sql` has been applied
  *      to your Supabase project (Dashboard → SQL Editor → paste → Run).
  *   2. `.env.local` is populated with `NEXT_PUBLIC_SUPABASE_URL`,
- *      `SUPABASE_ANON_KEY`, and `FOOTBALL_DATA_API_KEY`.
+ *      `SUPABASE_SERVICE_ROLE_KEY`, and `FOOTBALL_DATA_API_KEY`.
+ *
+ * This script writes via the `service_role` key, NOT `anon` — Row Level
+ * Security on the `players` table grants `anon` a public SELECT-only
+ * policy (no write policy), so an `anon`-key upsert would be rejected by
+ * RLS. `service_role` bypasses RLS entirely and is reserved exclusively
+ * for this sync job (see `lib/supabase/client.ts` doc comment and
+ * `supabase/migrations/0001_create_players_table.sql`). Client construction
+ * (via {@link createSyncSupabaseClient}) happens before any network call to
+ * football-data.org, so a missing `SUPABASE_SERVICE_ROLE_KEY` fails fast
+ * with a clear, secret-free error before a real run is attempted.
  *
  * This script is a plain manual entry point — no cron/scheduler is wired
  * up here. Cadence (daily/weekly) is explicitly a run-phase implementation
@@ -20,12 +30,11 @@
  */
 
 import { FootballDataOrgProvider } from "../lib/football-api";
-import { runPlayerDataSync, toSupabaseLike } from "../lib/player-data-sync";
-import { getSupabaseClient } from "../lib/supabase/client";
+import { createSyncSupabaseClient, runPlayerDataSync } from "../lib/player-data-sync";
 
 async function main(): Promise<void> {
   const provider = new FootballDataOrgProvider();
-  const supabase = toSupabaseLike(getSupabaseClient());
+  const supabase = createSyncSupabaseClient();
 
   const summary = await runPlayerDataSync({ provider, supabase });
 

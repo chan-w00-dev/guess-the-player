@@ -60,3 +60,20 @@ create table if not exists public.players (
 
 -- Supports a future multi-season filter/history query without a table scan.
 create index if not exists players_season_idx on public.players (season);
+
+-- Row Level Security (RLS): this table is public read-only data (football
+-- player facts — name/club/position/nationality/age/squad number are not
+-- sensitive). Gameplay (search, hint reveal, comparison) reads via the
+-- public `anon` key; only the M4 sync job writes, using the `service_role`
+-- key, which bypasses RLS entirely by design. Therefore:
+--   - RLS is enabled (a table with RLS enabled and NO policies denies all
+--     access by default until a policy explicitly grants it).
+--   - Exactly one policy is added: public SELECT for everyone (anon +
+--     authenticated). No INSERT/UPDATE/DELETE policy is added for anon —
+--     writes are only possible via service_role, which ignores RLS.
+alter table public.players enable row level security;
+
+create policy "Allow public read access to players"
+  on public.players
+  for select
+  using (true);

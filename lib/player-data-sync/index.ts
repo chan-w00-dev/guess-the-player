@@ -5,5 +5,5 @@
 
 export { DEFAULT_SEASON, runPlayerDataSync } from "./sync";
 export type { PlayerDataSyncSummary, RunPlayerDataSyncOptions } from "./sync";
-export { toSupabaseLike } from "./supabase-adapter";
+export { createSyncSupabaseClient, toSupabaseLike } from "./supabase-adapter";
 export type { PlayerRow, PlayersTableClient, SupabaseLike } from "./types";

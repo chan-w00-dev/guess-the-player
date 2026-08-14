@@ -1,5 +1,10 @@
 import { afterEach, describe, expect, it, vi } from "vitest";
-import { createSupabaseClient, getSupabaseClient } from "@/lib/supabase/client";
+import {
+  createSupabaseClient,
+  createSupabaseServiceRoleClient,
+  getSupabaseClient,
+  getSupabaseServiceRoleClient,
+} from "@/lib/supabase/client";
 
 afterEach(() => {
   vi.unstubAllEnvs();
@@ -70,5 +75,87 @@ describe("getSupabaseClient — process-wide singleton", () => {
 
   it("is exported and callable", () => {
     expect(typeof getSupabaseClient).toBe("function");
+  });
+});
+
+describe("createSupabaseServiceRoleClient — env-driven factory (service_role, RLS-bypassing)", () => {
+  it("throws a descriptive error when NEXT_PUBLIC_SUPABASE_URL is missing", () => {
+    vi.stubEnv("NEXT_PUBLIC_SUPABASE_URL", "");
+    vi.stubEnv("SUPABASE_SERVICE_ROLE_KEY", "test-service-role-key");
+
+    expect(() => createSupabaseServiceRoleClient()).toThrow(/NEXT_PUBLIC_SUPABASE_URL/);
+  });
+
+  it("throws a descriptive error when SUPABASE_SERVICE_ROLE_KEY is missing", () => {
+    vi.stubEnv("NEXT_PUBLIC_SUPABASE_URL", "https://example.supabase.co");
+    vi.stubEnv("SUPABASE_SERVICE_ROLE_KEY", "");
+
+    expect(() => createSupabaseServiceRoleClient()).toThrow(/SUPABASE_SERVICE_ROLE_KEY/);
+  });
+
+  it("never prints or includes the actual key value in the thrown error message", () => {
+    vi.stubEnv("NEXT_PUBLIC_SUPABASE_URL", "");
+    vi.stubEnv("SUPABASE_SERVICE_ROLE_KEY", "super-secret-service-role-value-should-not-leak");
+
+    try {
+      createSupabaseServiceRoleClient();
+      throw new Error("expected createSupabaseServiceRoleClient to throw");
+    } catch (error) {
+      const message = error instanceof Error ? error.message : String(error);
+      expect(message).not.toContain("super-secret-service-role-value-should-not-leak");
+    }
+  });
+
+  it("constructs a client without throwing when both env vars are present", () => {
+    vi.stubEnv("NEXT_PUBLIC_SUPABASE_URL", "https://example.supabase.co");
+    vi.stubEnv("SUPABASE_SERVICE_ROLE_KEY", "test-service-role-key");
+
+    const client = createSupabaseServiceRoleClient();
+
+    expect(client).toBeDefined();
+    expect(typeof client.from).toBe("function");
+  });
+
+  it("returns a fresh client instance on each call", () => {
+    vi.stubEnv("NEXT_PUBLIC_SUPABASE_URL", "https://example.supabase.co");
+    vi.stubEnv("SUPABASE_SERVICE_ROLE_KEY", "test-service-role-key");
+
+    const first = createSupabaseServiceRoleClient();
+    const second = createSupabaseServiceRoleClient();
+
+    expect(first).not.toBe(second);
+  });
+});
+
+describe("getSupabaseServiceRoleClient — process-wide singleton (service_role)", () => {
+  it("returns the same instance across repeated calls", async () => {
+    vi.stubEnv("NEXT_PUBLIC_SUPABASE_URL", "https://example.supabase.co");
+    vi.stubEnv("SUPABASE_SERVICE_ROLE_KEY", "test-service-role-key");
+    // Fresh module instance so the singleton cache starts empty for this test.
+    const { getSupabaseServiceRoleClient: freshGetter } = await import("@/lib/supabase/client");
+
+    const first = freshGetter();
+    const second = freshGetter();
+
+    expect(first).toBe(second);
+  });
+
+  it("is exported and callable", () => {
+    expect(typeof getSupabaseServiceRoleClient).toBe("function");
+  });
+
+  it("caches independently from the anon-key singleton (distinct cache slots)", async () => {
+    vi.stubEnv("NEXT_PUBLIC_SUPABASE_URL", "https://example.supabase.co");
+    vi.stubEnv("SUPABASE_ANON_KEY", "test-anon-key");
+    vi.stubEnv("SUPABASE_SERVICE_ROLE_KEY", "test-service-role-key");
+    const {
+      getSupabaseClient: freshGetSupabaseClient,
+      getSupabaseServiceRoleClient: freshGetServiceRoleClient,
+    } = await import("@/lib/supabase/client");
+
+    const anonClient = freshGetSupabaseClient();
+    const serviceRoleClient = freshGetServiceRoleClient();
+
+    expect(anonClient).not.toBe(serviceRoleClient);
   });
 });
