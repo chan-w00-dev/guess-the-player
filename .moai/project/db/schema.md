@@ -19,7 +19,7 @@ mapping table. See `.moai/project/db/migrations.md` for the applied/pending migr
 
 | Table | Description |
 |-------|-------------|
-| players | Premier League 2026/27 season player pool + the 5 compared attributes (nationality, club, position, age, squad number), synced by the periodic M4 sync job (`lib/player-data-sync/`) from football-data.org. Sole runtime source for player selection (M7), player search (M6), and the comparison engine (M2) — REQ-SYNC-003. |
+| players | Premier League 2026/27 season player pool + the 4 compared attributes (nationality, club, position, age), synced by the periodic M4 sync job (`lib/player-data-sync/`) from football-data.org. Sole runtime source for player selection (M7), player search (M6), and the comparison engine (M2) — REQ-SYNC-003. Squad number was dropped as a compared/synced attribute (spec.md HISTORY 0.4.0, `supabase/migrations/0002_drop_squad_number.sql`) — football-data.org's free tier does not supply it. `age` is computed using the calendar-year-only method (`age = referenceYear - birthYear`, no birthday adjustment; see `lib/football-api/age.ts`). |
 
 ---
 
@@ -61,4 +61,4 @@ Korean-name-mapping table is expected to reference `players.id`.
 |-------|-----------|------|-----------|
 | players | players_pkey | PRIMARY KEY | `id` (football-data.org's numeric person id) — also the sync job's upsert conflict target |
 | players | players_position_check | CHECK | `position IN ('FW', 'MF', 'DF', 'GK')` — the canonical 4-value position taxonomy (REQ-COMPARE-005); defense-in-depth, the M4 sync job already guarantees this before writing |
-| players | (column-level) | NOT NULL | `name`, `position`, `season` are required on every row; all other attribute columns (`club`, `nationality`, `age`, `squad_number`, `photo_url`) are nullable to model incomplete synced data (REQ-COMPARE-007) |
+| players | (column-level) | NOT NULL | `name`, `position`, `season` are required on every row; all other attribute columns (`club`, `nationality`, `age`, `photo_url`) are nullable to model incomplete synced data (REQ-COMPARE-007). `squad_number` was dropped by `supabase/migrations/0002_drop_squad_number.sql` (spec.md HISTORY 0.4.0). |

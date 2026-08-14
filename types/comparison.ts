@@ -12,14 +12,13 @@
 
 import type { Player } from "./player";
 
-/** The five compared/synced attributes (REQ-COMPARE-001, REQ-SYNC-002). */
-export const COMPARISON_ATTRIBUTES = [
-  "nationality",
-  "club",
-  "position",
-  "age",
-  "squadNumber",
-] as const;
+/**
+ * The four compared/synced attributes (REQ-COMPARE-001, REQ-SYNC-002).
+ * Squad number was removed (spec.md HISTORY 0.4.0) — football-data.org's
+ * free tier does not supply it, and age is the sole numeric/directional
+ * attribute.
+ */
+export const COMPARISON_ATTRIBUTES = ["nationality", "club", "position", "age"] as const;
 export type ComparisonAttribute = (typeof COMPARISON_ATTRIBUTES)[number];
 
 /** Attributes compared as an exact match indicator only, no direction (REQ-COMPARE-003). */
@@ -27,7 +26,7 @@ export const CATEGORICAL_ATTRIBUTES = ["nationality", "club", "position"] as con
 export type CategoricalAttribute = (typeof CATEGORICAL_ATTRIBUTES)[number];
 
 /** Attributes compared numerically with an optional direction on mismatch (REQ-COMPARE-004). */
-export const NUMERIC_ATTRIBUTES = ["age", "squadNumber"] as const;
+export const NUMERIC_ATTRIBUTES = ["age"] as const;
 export type NumericAttribute = (typeof NUMERIC_ATTRIBUTES)[number];
 
 /** Narrows a {@link ComparisonAttribute} to a {@link CategoricalAttribute}. */
@@ -71,7 +70,7 @@ export function isNumericAttributeResult(
   return isNumericAttribute(result.attribute);
 }
 
-/** One full comparison row for a single guess — exactly 5 attribute outcomes (REQ-COMPARE-001, 002). */
+/** One full comparison row for a single guess — exactly 4 attribute outcomes (REQ-COMPARE-001, 002). */
 export interface ComparisonResult {
   attributes: AttributeComparisonResult[];
 }

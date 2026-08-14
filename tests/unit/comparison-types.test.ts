@@ -22,20 +22,19 @@ const targetPlayer: Player = {
   position: "FW",
   nationality: "Norway",
   age: 25,
-  squadNumber: 9,
 };
 
 describe("Comparison attribute constants (REQ-COMPARE-001)", () => {
-  it("COMPARISON_ATTRIBUTES contains exactly the 5 required attributes", () => {
-    expect(COMPARISON_ATTRIBUTES).toHaveLength(5);
+  it("COMPARISON_ATTRIBUTES contains exactly the 4 required attributes", () => {
+    expect(COMPARISON_ATTRIBUTES).toHaveLength(4);
     expect(new Set(COMPARISON_ATTRIBUTES)).toEqual(
-      new Set(["nationality", "club", "position", "age", "squadNumber"]),
+      new Set(["nationality", "club", "position", "age"]),
     );
   });
 
   it("CATEGORICAL_ATTRIBUTES and NUMERIC_ATTRIBUTES partition COMPARISON_ATTRIBUTES exactly", () => {
     expect(CATEGORICAL_ATTRIBUTES).toHaveLength(3);
-    expect(NUMERIC_ATTRIBUTES).toHaveLength(2);
+    expect(NUMERIC_ATTRIBUTES).toHaveLength(1);
 
     const union = new Set([...CATEGORICAL_ATTRIBUTES, ...NUMERIC_ATTRIBUTES]);
     expect(union).toEqual(new Set(COMPARISON_ATTRIBUTES));
@@ -81,18 +80,18 @@ describe("AttributeComparisonResult discriminated union (REQ-COMPARE-003/004)", 
     }
   });
 
-  it("a full ComparisonResult carries exactly 5 attribute outcomes", () => {
+  it("a full ComparisonResult carries exactly 4 attribute outcomes", () => {
     const comparison: ComparisonResult = {
       attributes: COMPARISON_ATTRIBUTES.map(
         (attribute): AttributeComparisonResult => ({ attribute, correct: true }),
       ),
     };
-    expect(comparison.attributes).toHaveLength(5);
+    expect(comparison.attributes).toHaveLength(4);
   });
 
   it("supports marking an attribute unavailable for incomplete synced data (REQ-COMPARE-007)", () => {
     const result: AttributeComparisonResult = {
-      attribute: "squadNumber",
+      attribute: "age",
       correct: false,
       unavailable: true,
     };

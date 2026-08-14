@@ -31,7 +31,6 @@ describe("MockFootballDataProvider — deterministic fixed dataset", () => {
       position: "MF",
       nationality: null,
       age: null,
-      squadNumber: null,
     });
 
     const second = await provider.fetchPlayerPool();
@@ -56,7 +55,6 @@ describe("MockFootballDataProvider — deterministic fixed dataset", () => {
       expect(player.club).not.toBeNull();
       expect(player.nationality).not.toBeNull();
       expect(player.age).not.toBeNull();
-      expect(player.squadNumber).not.toBeNull();
     }
   });
 });

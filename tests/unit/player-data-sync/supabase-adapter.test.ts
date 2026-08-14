@@ -25,7 +25,6 @@ const sampleRow: PlayerRow = {
   position: "FW",
   nationality: "Testland",
   age: 20,
-  squad_number: 9,
   photo_url: null,
   season: "2026/27",
   synced_at: "2026-08-14T00:00:00.000Z",

@@ -53,7 +53,6 @@ describe("runPlayerDataSync — successful full-pool sync", () => {
         position: "MF",
         nationality: "Testland",
         age: 24,
-        squadNumber: 8,
         photo: "https://example.com/photo.jpg",
       },
     ]);
@@ -69,7 +68,6 @@ describe("runPlayerDataSync — successful full-pool sync", () => {
       position: "MF",
       nationality: "Testland",
       age: 24,
-      squad_number: 8,
       photo_url: "https://example.com/photo.jpg",
       season: DEFAULT_SEASON,
       synced_at: "2026-08-14T12:00:00.000Z",
@@ -85,7 +83,6 @@ describe("runPlayerDataSync — successful full-pool sync", () => {
         position: "DF",
         nationality: null,
         age: null,
-        squadNumber: null,
       },
     ]);
     const { supabase, calls } = fakeSupabase(() => ({ error: null }));
@@ -96,7 +93,6 @@ describe("runPlayerDataSync — successful full-pool sync", () => {
     expect(calls[0].club).toBeNull();
     expect(calls[0].nationality).toBeNull();
     expect(calls[0].age).toBeNull();
-    expect(calls[0].squad_number).toBeNull();
   });
 });
 
@@ -133,9 +129,9 @@ describe("runPlayerDataSync — season and synced_at stamping (REQ-SYNC-002)", (
 describe("runPlayerDataSync — partial failure resilience", () => {
   it("continues past a single player's upsert error and reports it in errors, without throwing", async () => {
     const provider = fakeProvider([
-      { id: "1", name: "Player One", club: "A", position: "FW", nationality: "X", age: 20, squadNumber: 10 },
-      { id: "2", name: "Player Two", club: "B", position: "MF", nationality: "Y", age: 22, squadNumber: 11 },
-      { id: "3", name: "Player Three", club: "C", position: "DF", nationality: "Z", age: 25, squadNumber: 12 },
+      { id: "1", name: "Player One", club: "A", position: "FW", nationality: "X", age: 20 },
+      { id: "2", name: "Player Two", club: "B", position: "MF", nationality: "Y", age: 22 },
+      { id: "3", name: "Player Three", club: "C", position: "DF", nationality: "Z", age: 25 },
     ]);
     const { supabase, calls } = fakeSupabase((row) =>
       row.id === 2 ? { error: { message: "constraint violation" } } : { error: null },
@@ -155,8 +151,8 @@ describe("runPlayerDataSync — partial failure resilience", () => {
 
   it("catches a thrown exception from upsert (not just a returned error) and continues", async () => {
     const provider = fakeProvider([
-      { id: "1", name: "Player One", club: "A", position: "FW", nationality: "X", age: 20, squadNumber: 10 },
-      { id: "2", name: "Player Two", club: "B", position: "MF", nationality: "Y", age: 22, squadNumber: 11 },
+      { id: "1", name: "Player One", club: "A", position: "FW", nationality: "X", age: 20 },
+      { id: "2", name: "Player Two", club: "B", position: "MF", nationality: "Y", age: 22 },
     ]);
     const supabase: SupabaseLike = {
       from(table) {
@@ -181,7 +177,7 @@ describe("runPlayerDataSync — partial failure resilience", () => {
 
   it("stringifies a non-Error thrown value (e.g. a plain string reject reason)", async () => {
     const provider = fakeProvider([
-      { id: "1", name: "Player One", club: "A", position: "FW", nationality: "X", age: 20, squadNumber: 10 },
+      { id: "1", name: "Player One", club: "A", position: "FW", nationality: "X", age: 20 },
     ]);
     const supabase: SupabaseLike = {
       from(table) {

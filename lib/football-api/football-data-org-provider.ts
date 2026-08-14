@@ -24,14 +24,19 @@ import type { FootballDataProvider } from "./types";
 
 const COMPETITION_ENDPOINT = "https://api.football-data.org/v4/competitions/PL/teams";
 
-/** football-data.org's raw `Person`/`Player` shape (the subset this adapter consumes). */
+/**
+ * football-data.org's raw `Person`/`Player` shape (the subset this adapter
+ * consumes). No `shirtNumber` field — confirmed live against the free-tier
+ * API (spec.md HISTORY 0.4.0): the raw player object returns only
+ * `id, name, position, dateOfBirth, nationality` on both the
+ * competition-teams bulk endpoint and the per-team detail endpoint.
+ */
 interface RawFootballDataPlayer {
   id: number;
   name: string;
   position: string | null;
   dateOfBirth: string | null;
   nationality: string | null;
-  shirtNumber: number | null;
 }
 
 interface RawFootballDataTeam {
@@ -139,6 +144,5 @@ function mapRawPlayer(
     position,
     nationality: raw.nationality ?? null,
     age: raw.dateOfBirth ? computeAge(raw.dateOfBirth, referenceDate) : null,
-    squadNumber: raw.shirtNumber ?? null,
   };
 }

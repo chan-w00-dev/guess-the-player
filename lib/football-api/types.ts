@@ -1,9 +1,9 @@
 /**
  * FootballDataProvider abstraction boundary — SPEC-GAME-CORE-001 §F M3.
  *
- * Fetches the Premier League 2026/27 player pool plus its five compared
- * attributes (nationality, club, position, age, squad number), already
- * mapped onto the M1 {@link Player} shape. Consumed exclusively by the M4
+ * Fetches the Premier League 2026/27 player pool plus its four compared
+ * attributes (nationality, club, position, age), already mapped onto the
+ * M1 {@link Player} shape. Consumed exclusively by the M4
  * sync job (spec.md REQ-SYNC-001) — never by a live gameplay request
  * handler (player selection, search, guess submission, or their
  * `app/api/` routes read only from Supabase, per plan.md §D/§G).

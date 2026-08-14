@@ -1,0 +1,32 @@
+-- Migration: 0002_drop_squad_number.sql
+-- SPEC-GAME-CORE-001 §HISTORY 0.4.0 — Squad Number Dropped as a Compared/Synced Attribute
+--
+-- Drops the `squad_number` column from `public.players`. Real live testing
+-- against football-data.org's free-tier API confirmed it does not provide
+-- shirt/squad-number data for any endpoint accessible on the free key (the
+-- raw player object returns only `id, name, position, dateOfBirth,
+-- nationality`). The `squad_number` column has been 100% null since the
+-- first M4 sync job run and is no longer written by the sync job
+-- (lib/player-data-sync/sync.ts) or compared by the comparison engine
+-- (lib/game/comparison-engine.ts) as of this SPEC revision. The comparison
+-- engine now compares exactly 4 attributes: nationality, club, position,
+-- and age.
+--
+-- HOW TO RUN THIS MIGRATION (manual — no DB credentials are available to
+-- the implementing agent, so this file is NOT executed automatically):
+--   1. Open the Supabase Dashboard for your project.
+--   2. Go to the SQL Editor.
+--   3. Paste the full contents of this file.
+--   4. Click "Run".
+--   5. Verify: `select column_name from information_schema.columns
+--      where table_schema = 'public' and table_name = 'players' and
+--      column_name = 'squad_number';` returns zero rows.
+--
+-- After running this migration, the orchestrator MUST also re-run the
+-- player-data sync job (`npm run sync:players`) to refresh the `age` column
+-- for all 621 existing rows using the corrected calendar-year-only
+-- computation (lib/football-api/age.ts) — this migration only drops the
+-- column; it does not touch existing `age` values, which remain stale
+-- (computed with the old birthday-adjusted method) until the next sync run.
+
+alter table public.players drop column if exists squad_number;

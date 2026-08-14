@@ -16,7 +16,6 @@ export interface PlayerRow {
   position: string;
   nationality: string | null;
   age: number | null;
-  squad_number: number | null;
   photo_url: string | null;
   season: string;
   synced_at: string;

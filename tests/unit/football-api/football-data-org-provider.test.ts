@@ -69,7 +69,6 @@ describe("FootballDataOrgProvider — response-to-Player mapping correctness", (
                 position: "Centre-Forward",
                 dateOfBirth: "2000-07-21",
                 nationality: "Norway",
-                shirtNumber: 9,
               },
             ],
           },
@@ -92,7 +91,6 @@ describe("FootballDataOrgProvider — response-to-Player mapping correctness", (
       position: "FW",
       nationality: "Norway",
       age: 26,
-      squadNumber: 9,
     });
   });
 
@@ -109,7 +107,6 @@ describe("FootballDataOrgProvider — response-to-Player mapping correctness", (
                 position: "Goalkeeper",
                 dateOfBirth: "1995-01-01",
                 nationality: "England",
-                shirtNumber: 1,
               },
             ],
           },
@@ -122,7 +119,6 @@ describe("FootballDataOrgProvider — response-to-Player mapping correctness", (
                 position: "Defender",
                 dateOfBirth: "1996-01-01",
                 nationality: "France",
-                shirtNumber: 4,
               },
             ],
           },
@@ -141,7 +137,7 @@ describe("FootballDataOrgProvider — response-to-Player mapping correctness", (
     expect(pool.map((player) => player.id)).toEqual(["1", "2"]);
   });
 
-  it("maps null nationality, null dateOfBirth, and null shirtNumber to null Player fields", async () => {
+  it("maps null nationality and null dateOfBirth to null Player fields", async () => {
     const fetchImpl = vi.fn(async () =>
       jsonResponse({
         teams: [
@@ -154,7 +150,6 @@ describe("FootballDataOrgProvider — response-to-Player mapping correctness", (
                 position: "Midfield",
                 dateOfBirth: null,
                 nationality: null,
-                shirtNumber: null,
               },
             ],
           },
@@ -171,7 +166,6 @@ describe("FootballDataOrgProvider — response-to-Player mapping correctness", (
 
     expect(pool[0].age).toBeNull();
     expect(pool[0].nationality).toBeNull();
-    expect(pool[0].squadNumber).toBeNull();
     expect(pool[0].position).toBe("MF");
   });
 });
@@ -191,7 +185,6 @@ describe("FootballDataOrgProvider — position-taxonomy fallback (skip unmapped 
                 position: "Goalkeeper",
                 dateOfBirth: "1995-01-01",
                 nationality: "England",
-                shirtNumber: 1,
               },
               {
                 id: 2,
@@ -199,7 +192,6 @@ describe("FootballDataOrgProvider — position-taxonomy fallback (skip unmapped 
                 position: "Team Coach",
                 dateOfBirth: "1990-01-01",
                 nationality: "England",
-                shirtNumber: 99,
               },
             ],
           },
@@ -234,7 +226,6 @@ describe("FootballDataOrgProvider — position-taxonomy fallback (skip unmapped 
                 position: null,
                 dateOfBirth: "1990-01-01",
                 nationality: "England",
-                shirtNumber: 5,
               },
             ],
           },

@@ -3,7 +3,7 @@
  *
  * The sole caller of the M3 {@link FootballDataProvider} abstraction
  * (REQ-SYNC-001). Fetches the Premier League 2026/27 season player pool and
- * the 5 required attribute fields — plus the optional display-only `photo`
+ * the 4 required attribute fields — plus the optional display-only `photo`
  * field when present — and writes/refreshes the Supabase `players` table.
  *
  * This module is resilient to a single player's write failure: a failure
@@ -61,7 +61,6 @@ function toPlayerRow(player: Player, season: string, syncedAt: string): PlayerRo
     position: player.position,
     nationality: player.nationality,
     age: player.age,
-    squad_number: player.squadNumber,
     photo_url: player.photo ?? null,
     season,
     synced_at: syncedAt,

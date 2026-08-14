@@ -16,7 +16,6 @@ const target: Player = {
   position: "FW",
   nationality: "Norway",
   age: 25,
-  squadNumber: 9,
 };
 
 /** An exact clone of {@link target}, used for the all-match scenario. */
@@ -36,10 +35,10 @@ function findResult(
 }
 
 describe("compareGuess — full result shape (REQ-COMPARE-001, 002)", () => {
-  it("returns exactly 5 attribute outcomes covering every COMPARISON_ATTRIBUTES entry", () => {
+  it("returns exactly 4 attribute outcomes covering every COMPARISON_ATTRIBUTES entry", () => {
     const comparison = compareGuess(exactGuess(), target);
 
-    expect(comparison.attributes).toHaveLength(5);
+    expect(comparison.attributes).toHaveLength(4);
     expect(new Set(comparison.attributes.map((entry) => entry.attribute))).toEqual(
       new Set(COMPARISON_ATTRIBUTES),
     );
@@ -66,7 +65,6 @@ describe("compareGuess — categorical attributes (REQ-COMPARE-003)", () => {
       position: "GK",
       nationality: "Brazil",
       age: 25,
-      squadNumber: 9,
     };
     const comparison = compareGuess(guess, target);
 
@@ -94,16 +92,13 @@ describe("compareGuess — categorical attributes (REQ-COMPARE-003)", () => {
 });
 
 describe("compareGuess — numeric attributes (REQ-COMPARE-004)", () => {
-  it("numeric match: age and squadNumber equal reports correct, no direction", () => {
+  it("numeric match: age equal reports correct, no direction", () => {
     const comparison = compareGuess(exactGuess(), target);
 
     const age = findResult(comparison, "age");
-    const squadNumber = findResult(comparison, "squadNumber");
 
     expect(age.correct).toBe(true);
     expect("direction" in age).toBe(false);
-    expect(squadNumber.correct).toBe(true);
-    expect("direction" in squadNumber).toBe(false);
   });
 
   it("numeric mismatch higher: target's age is higher than the guessed player's age", () => {
@@ -127,17 +122,6 @@ describe("compareGuess — numeric attributes (REQ-COMPARE-004)", () => {
     expect(isNumericAttributeResult(age)).toBe(true);
     if (isNumericAttributeResult(age)) {
       expect(age.direction).toBe("lower");
-    }
-  });
-
-  it("numeric mismatch direction also applies to squadNumber independently of age", () => {
-    const guess: Player = { ...target, id: "guess-squad", squadNumber: 20 };
-    const comparison = compareGuess(guess, target); // target.squadNumber = 9
-
-    const squadNumber = findResult(comparison, "squadNumber");
-    expect(squadNumber.correct).toBe(false);
-    if (isNumericAttributeResult(squadNumber)) {
-      expect(squadNumber.direction).toBe("lower");
     }
   });
 });
@@ -196,20 +180,20 @@ describe("compareGuess — incomplete synced data (REQ-COMPARE-007)", () => {
   });
 
   it("marks a numeric attribute unavailable when the target player's value is null, with no direction", () => {
-    const nullTarget: Player = { ...target, squadNumber: null };
+    const nullTarget: Player = { ...target, age: null };
     const comparison = compareGuess(exactGuess(), nullTarget);
 
-    const squadNumber = findResult(comparison, "squadNumber");
-    expect(squadNumber.unavailable).toBe(true);
-    expect(squadNumber.correct).toBe(false);
-    expect("direction" in squadNumber).toBe(false);
+    const age = findResult(comparison, "age");
+    expect(age.unavailable).toBe(true);
+    expect(age.correct).toBe(false);
+    expect("direction" in age).toBe(false);
   });
 
   it("does not fail the guess submission — other attributes still compare normally when one is unavailable", () => {
     const guess: Player = { ...target, id: "guess-partial-null", age: null, club: "Wrong Club" };
     const comparison = compareGuess(guess, target);
 
-    expect(comparison.attributes).toHaveLength(5);
+    expect(comparison.attributes).toHaveLength(4);
 
     const age = findResult(comparison, "age");
     expect(age.unavailable).toBe(true);
