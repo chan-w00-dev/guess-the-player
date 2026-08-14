@@ -1,12 +1,15 @@
 /**
  * Position-taxonomy keyword-classification rule — SPEC-GAME-CORE-001 §F M3.
  *
- * Maps a football-data.org raw `position` string (a free-text value such as
- * "Central Midfield", "Attacking Midfield", "Centre-Back", "Left Winger")
- * onto the canonical 4-value {@link Position} taxonomy, per plan.md §B's
- * resolved keyword-based substring classification rule. The priority order
- * below is load-bearing: it MUST stay exactly Goalkeeper -> Midfield ->
- * Back/Defen -> Forward/Winger/Attack/Striker so compound strings like
+ * Maps a football-data.org raw `position` string onto the canonical 4-value
+ * {@link Position} taxonomy, per plan.md §B's resolved keyword-based
+ * substring classification rule. The raw value may be either a granular
+ * sub-position string (e.g. "Central Midfield", "Attacking Midfield",
+ * "Centre-Back", "Left Winger") or a coarse top-level category as returned
+ * by the live `/v4/competitions/PL/teams` endpoint (e.g. "Offence",
+ * "Defence", "Midfield", "Goalkeeper"). The priority order below is
+ * load-bearing: it MUST stay exactly Goalkeeper -> Midfield -> Back/Defen ->
+ * Forward/Winger/Attack/Striker/Offence/Offense so compound strings like
  * "Attacking Midfield" and "Defensive Midfield" classify as MF (checked
  * before the FW/DF keyword families), never falling through to FW or DF.
  */
@@ -38,7 +41,9 @@ export function mapPosition(rawPosition: string): Position | null {
     value.includes("forward") ||
     value.includes("winger") ||
     value.includes("attack") ||
-    value.includes("striker")
+    value.includes("striker") ||
+    value.includes("offence") ||
+    value.includes("offense")
   ) {
     return "FW";
   }

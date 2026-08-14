@@ -49,6 +49,33 @@ describe("mapPosition — Forward/Winger/Attack/Striker (rule 4)", () => {
   );
 });
 
+describe("mapPosition — Offence/Offense (rule 4, live football-data.org top-level category)", () => {
+  it.each(["Offence", "OFFENCE", "offence", "Offense", "OFFENSE", "offense"])(
+    'classifies "%s" as FW',
+    (raw) => {
+      expect(mapPosition(raw)).toBe("FW");
+    },
+  );
+
+  it('classifies "Offence, Left" as FW (compound value sanity check)', () => {
+    expect(mapPosition("Offence, Left")).toBe("FW");
+  });
+});
+
+describe("mapPosition — live football-data.org top-level categories (regression)", () => {
+  it('classifies "Goalkeeper" as GK', () => {
+    expect(mapPosition("Goalkeeper")).toBe("GK");
+  });
+
+  it('classifies "Midfield" as MF', () => {
+    expect(mapPosition("Midfield")).toBe("MF");
+  });
+
+  it('classifies "Defence" as DF', () => {
+    expect(mapPosition("Defence")).toBe("DF");
+  });
+});
+
 describe("mapPosition — fallback (rule 5, unmapped values)", () => {
   it.each(["Coach", "Manager", "", "Unknown Role", "Physio"])(
     'returns null for unmapped raw value "%s"',
