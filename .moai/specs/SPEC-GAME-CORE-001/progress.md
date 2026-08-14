@@ -2,11 +2,11 @@
 
 ## §E.1 Plan-phase Audit-Ready Signal
 
-plan_status: audit-ready (fresh audit cycle required — see 0.3.0 entry below)
+plan_status: audit-ready (fresh audit cycle required — see 0.5.0 entry below)
 plan_complete_at: 2026-08-13
 plan_revised_at: 2026-08-14
 
-Plan-phase artifacts created: `spec.md`, `plan.md`, `acceptance.md`, `spec-compact.md` (this SPEC directory). GEARS requirements now cover 7 modules (player selection, attribute comparison engine, guess submission & attempt cap, Korean name mapping, player search & autocomplete, unlimited replay, player-data sourcing & sync) plus 4 non-functional requirements. Out of Scope section present with 7 `### Out of Scope — <topic>` sub-headings.
+Plan-phase artifacts created: `spec.md`, `plan.md`, `acceptance.md`, `spec-compact.md` (this SPEC directory). GEARS requirements now cover 7 modules (player selection, attribute comparison engine, guess submission & attempt cap, Korean name mapping, player search & autocomplete, unlimited replay, player-data sourcing & sync) plus 4 non-functional requirements. Out of Scope section present with 8 `### Out of Scope — <topic>` sub-headings (as of the 0.5.0 revision below).
 
 **Audit history under the pre-0.3.0 mechanic (currency fix, per D-NEW-2 of `SPEC-GAME-CORE-001-review-3.md`):**
 - **Iteration 1** (`review-1.md`): FAIL — MP-7 clarification-gate failure (football-data.org provider undecided) plus D1 minor traceability wording defect.
@@ -29,6 +29,30 @@ Changes applied in this revision:
 - The position-taxonomy mapping (`plan.md` §B) is RESOLVED — a keyword-based classification rule (Goalkeeper → Midfield → Back/Defen → Forward/Winger/Attack/Striker priority order, with an explicit fallback for unmapped values) replaced the `[NEEDS CLARIFICATION]` marker. Zero unresolved markers remain across spec.md/plan.md/acceptance.md/spec-compact.md.
 
 Tier: M (unchanged). Route: Hybrid Trunk main-direct (no branch/worktree, unchanged). **Plan-auditor status reset: this SPEC requires a fresh audit cycle (starting at iteration 1 of a new cycle) against the 0.3.0 requirement set before proceeding to run-phase** — the iteration-3 PASS (0.89) audited a since-superseded requirement set and does not satisfy the Plan Audit Gate for 0.3.0.
+
+**0.4.0 scoped revision (2026-08-14) — squad number dropped + age computation corrected, informed by real live-implementation findings during M1-M4:**
+
+This is a scoped revision (not a full SPEC rewrite), driven by two real live-implementation findings surfaced during M1-M4 run-phase work:
+
+1. **Squad number dropped as a compared/synced attribute (5 → 4 attributes).** Live testing against football-data.org's free-tier API confirmed it does not provide shirt/squad-number data on any endpoint accessible on the free key — verified directly against both the competition-teams bulk endpoint and the per-team detail endpoint; the raw player object contains only `id, name, position, dateOfBirth, nationality`. A free alternative (TheSportsDB) exists but requires either an unreliable ~1,240-call double-lookup-per-player scheme (40+ min/sync, cross-source name-matching risk) or a paid $9/month tier. The user decided this complexity is not worth it and confirmed dropping squad number entirely. The comparison engine and synced attribute set are now 4 attributes: nationality, club, position (categorical), and age (numeric, sole directional-arrow attribute). See `plan.md` §B "Resolved — Squad Number Dropped as a Compared/Synced Attribute" for the full rationale.
+2. **Age computation corrected to calendar-year-only.** The M3 implementation (`lib/football-api/age.ts`) had computed age with a birthday-adjustment ("만 나이"-style). The user explicitly wants the simpler calendar-year-only method (Korean "연 나이" convention): `age = referenceYear - birthYear`, no month/day comparison. See `plan.md` §B "Age computation" note for the corrected, explicit method statement.
+
+**Code-removal/correction pass required, delegated separately**: M1-M4 code already exists under the pre-0.4.0 5-attribute / birthday-adjusted-age scope (`types/player.ts`, `types/comparison.ts`, `lib/game/comparison-engine.ts` where landed, `lib/football-api/`, `lib/player-data-sync/`, and the Supabase player-data table migration). This SPEC revision covers artifacts only — the corresponding code-removal/correction pass in the modules above is a separate, already-delegated run-phase task (manager-develop), not performed as part of this revision.
+
+Tier: M (unchanged). Route: Hybrid Trunk main-direct (unchanged). This is a scoped revision of the 0.3.0 requirement set already pending a fresh plan-auditor cycle — the fresh-audit-cycle requirement noted above carries forward, now against the 0.4.0 requirement set.
+
+**0.5.0 scoped revision (2026-08-14) — squad number reinstated, manually maintained:**
+
+This is a scoped revision (not a full SPEC rewrite), reversing the 0.4.0 squad-number drop per a new user decision. The 0.4.0 finding itself (football-data.org's free tier never supplies shirt/squad-number data) is unchanged and still holds — what changed is the user's operating model: the user runs their own self-hosted Supabase database and is willing to manually maintain squad numbers, the same way Korean name mappings are manually maintained via the M5 seed process, rather than relying on automatic sync from football-data.org.
+
+1. **Squad number restored as the 5th compared/synced attribute (4 → 5 attributes).** REQ-COMPARE-001/002/004/007 (`spec.md` §B.2) updated back to 5 attributes: nationality, club, position remain the three categorical attributes; age and squad number are now both numeric attributes with a directional indicator on mismatch. Git-history investigation (orchestrator-verified prior to this revision) confirmed `types/player.ts`'s pre-0.4.0 `squadNumber: number | null` field and `lib/game/comparison-engine.ts`'s pre-0.4.0 squad-number comparison logic (git history commit `9a7d6f4^`) are REUSABLE; the old `lib/football-api/football-data-org-provider.ts` squad-number fetch path is NOT reusable and must not be revived — it always mapped to `null` on the free tier, which was the original 0.4.0 finding.
+2. **New REQ-SYNC-004/005 (`spec.md` §B.7)** — folded into the existing sync module rather than a new REQ-SQUAD-* series (rationale: squad number sourcing is a nuance of the same "where does attribute data come from" story REQ-SYNC-001..003 already tell). Squad numbers are populated via a manual entry process keyed by player id, never via the periodic sync job; the sync job's upsert payload MUST NOT include `squad_number`, so a manually-entered value is never overwritten on a subsequent sync run. This addresses a critical implementation risk: without this omission, every periodic sync would silently wipe manually-entered squad numbers back to unset, since the provider never returns this field.
+3. **New REQ-SELECT-005 (`spec.md` §B.1)** — the target-player selection pool (M7, not yet built) is restricted to players having both a Korean name mapping and a registered squad number, so every round is guaranteed fully playable/comparable, not degraded by REQ-KOREAN-003's original-name fallback or a missing squad-number cell. Recorded separately by the user on 2026-08-14 for M7.
+4. **New Out of Scope — Squad Number Administration Tooling** (`spec.md` §D), paralleling the existing Korean Mapping Administration Tooling exclusion.
+
+**Code re-addition pass required, delegated separately**: M1, M2, and M4 code already exists under the pre-0.5.0 4-attribute scope (`types/player.ts`, `types/comparison.ts`, `lib/game/comparison-engine.ts`, and `lib/player-data-sync/sync.ts`'s upsert payload), all implemented complete per the 0.4.0-era scope. This SPEC revision covers artifacts only — the corresponding code re-addition pass (restoring the git-history-reusable squad-number type/comparison logic, adding a new Supabase migration to re-add the `squad_number` column, modifying the M4 sync job's upsert to explicitly omit `squad_number`, and creating a new manual squad-number entry script keyed by player id) in the modules above is a separate, already-delegated run-phase task (manager-develop), not performed as part of this revision. M3 requires no code change — its "football-data.org does not supply squad-number data" statement remains true and unchanged, since the old provider fetch path is explicitly not revived.
+
+Tier: M (unchanged). Route: Hybrid Trunk main-direct (unchanged). This is a scoped revision of the 0.4.0 requirement set already pending a fresh plan-auditor cycle (carried forward from the 0.3.0 major revision) — the fresh-audit-cycle requirement noted above carries forward, now against the 0.5.0 requirement set.
 
 ## §E.2 Run-phase Evidence
 

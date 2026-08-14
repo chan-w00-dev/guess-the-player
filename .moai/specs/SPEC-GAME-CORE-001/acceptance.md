@@ -4,11 +4,11 @@
 
 Automated tests only, per `product.md` § 검증 방식: Vitest (`npm test`), TDD (test-first, RED-GREEN-REFACTOR). Coverage targets from `.moai/config/sections/quality.yaml`: 85% overall target, 80% minimum per commit. Unit tests cover `lib/game/`, `lib/korean-name-mapping/`, `lib/player-search/` first (pure logic, per `tech.md` § 테스트 방식 recommendation); integration tests cover the full guess flow (`tests/integration/guess-flow.test.ts`) and the API route boundary. External dependencies (the football data provider, Supabase) are exercised through mock/stub adapters in unit and integration tests — no test depends on a live external service.
 
-This is the 0.3.0 revision of `acceptance.md`, rewritten to cover the attribute-comparison guesser mechanic (`spec.md` HISTORY 0.3.0) in place of the retired progressive/sequential hint-reveal mechanic. No scenario below references hint-reveal behavior.
+This is the 0.3.0 revision of `acceptance.md`, rewritten to cover the attribute-comparison guesser mechanic (`spec.md` HISTORY 0.3.0) in place of the retired progressive/sequential hint-reveal mechanic. No scenario below references hint-reveal behavior. Updated in the 0.4.0 scoped revision (`spec.md` HISTORY 0.4.0): squad number removed as a compared attribute (4 attributes now: nationality, club, position, age); no scenario below references squad number as a live requirement. Updated in the 0.5.0 scoped revision (`spec.md` HISTORY 0.5.0): squad number reinstated as a compared attribute (5 attributes again: nationality, club, position, age, squad number), now sourced via manual entry rather than sync from football-data.org; Scenarios 3, 20, 21, and 22 below cover squad-number comparison, the manual-maintenance/no-overwrite requirement, and the M7 player-pool filter.
 
 ## §B. Given-When-Then Scenarios
 
-Minimum 2 required; 19 provided covering every requirement module in `spec.md` §B, including the full 8-guess losing round, a mid-round winning guess, the duplicate-guess-consumes-an-attempt behavior, Korean-input autocomplete + guess acceptance, and the categorical-vs-numeric-with-arrow comparison distinction.
+Minimum 2 required; 22 provided covering every requirement module in `spec.md` §B, including the full 8-guess losing round, a mid-round winning guess, the duplicate-guess-consumes-an-attempt behavior, Korean-input autocomplete + guess acceptance, the categorical-vs-numeric-with-arrow comparison distinction, and (0.5.0) squad-number comparison, manual maintenance/no-overwrite, and the M7 player-pool filter.
 
 1. **New round selects a random player from the Premier League 2026/27 pool, excluding the immediately preceding one**
    Given a Premier League 2026/27 player pool with 3 or more players and a just-completed round whose target was Player X
@@ -63,7 +63,7 @@ Minimum 2 required; 19 provided covering every requirement module in `spec.md` �
 11. **Incorrect-guess response never includes the target's identity beyond the comparison row**
     Given an active round
     When the user submits an incorrect guess
-    Then the guess submission response contains only the 5-attribute comparison result, with no field identifying the target player (REQ-GUESS-005)
+    Then the guess submission response contains only the 4-attribute comparison result, with no field identifying the target player (REQ-GUESS-005)
 
 12. **Korean-language partial-name query returns matching autocomplete candidates**
     Given the current player pool contains "손흥민" (Son Heung-min)
@@ -105,13 +105,29 @@ Minimum 2 required; 19 provided covering every requirement module in `spec.md` �
     When any live gameplay request handler executes
     Then it reads player pool/attribute data only from the Supabase player-data table and makes no call to football-data.org — only the periodic sync job calls the provider (REQ-SYNC-001, REQ-SYNC-003)
 
+20. **Squad number mismatch shows incorrect plus a directional indicator (numeric attribute, reinstated 0.5.0)**
+    Given a guessed player whose squad number differs from the target's squad number
+    When the comparison result is computed
+    Then the squad number attribute is shown as incorrect, plus a directional indicator showing whether the target's squad number is higher or lower than the guessed player's (REQ-COMPARE-004)
+
+21. **A manually-entered squad number is never overwritten by the periodic sync job**
+    Given a player's squad number was manually entered into the Supabase `players` table
+    When the periodic sync job runs and refreshes that player's other attributes (nationality, club, position, age)
+    Then the player's `squad_number` column value is unchanged after the sync run — the sync job's upsert payload never includes `squad_number` (REQ-SYNC-004, REQ-SYNC-005)
+
+22. **Target-player selection pool is restricted to fully-registered players (Korean mapping + squad number)**
+    Given the full synced Premier League 2026/27 player pool, where some players have both a Korean name mapping and a registered squad number and others are missing one or both
+    When a new round starts and the player selection service selects a target player
+    Then the selected target is always drawn only from the subset of players having both a Korean name mapping and a registered squad number (REQ-SELECT-005)
+
 ## §C. Edge Cases
 
 - Empty player pool at round start (REQ-SELECT-004) — no round starts; an empty-pool state is surfaced instead of a crash or a round with an undefined target.
 - Player pool of exactly one player (Scenario 2) — duplicate avoidance cannot apply by definition; the same player may repeat, and this is correct behavior, not a bug.
 - Supabase player-data table unavailable/error mid-round (Scenario 18) — must degrade to a retryable error state, not an unhandled exception or a leaked target identity.
 - No Korean mapping found for the current target player (Scenario 16) — must fall back gracefully, not throw or block the round.
-- Target or guessed player is missing a numeric attribute (age or squad number) in the synced data — plausible during 2026/27 pre-season roster gaps (see `plan.md` §B residual risk). REQ-COMPARE-007 requires the comparison engine to mark that attribute as unavailable rather than fail the guess; covered as a must-pass case (AC-GAME-CORE-009), not merely a should-pass note, since the residual risk is expected to materialize during pre-season weeks.
+- Target or guessed player is missing the numeric attribute (age) in the synced data — plausible during 2026/27 pre-season roster gaps (see `plan.md` §B residual risk). REQ-COMPARE-007 requires the comparison engine to mark that attribute as unavailable rather than fail the guess; covered as a must-pass case (AC-GAME-CORE-009), not merely a should-pass note, since the residual risk is expected to materialize during pre-season weeks.
+- **Guessed player (not the target) is missing squad number (0.5.0)** — REQ-SELECT-005 restricts the TARGET pool to players with a registered squad number, but REQ-SEARCH-001's autocomplete still searches the full synced pool, so a user can still select-and-guess a player who has no squad number registered yet. REQ-COMPARE-007's generic incomplete-data handling (mark that cell unavailable, do not fail the guess) already covers this asymmetric case — recorded here for clarity, not a new AC beyond AC-GAME-CORE-009's existing coverage.
 - Raw provider position string does not match any keyword in the resolved classification rule (`plan.md` §B) — the rule's explicit fallback applies (log the unmapped value, skip that player from the pool for the current sync run); the keyword list itself is validated/expanded against real API response data at run-phase milestone M3 before M4/M6/M7 begin consuming position data. This SPEC fixes both the invariant that the OUTPUT is always one of the 4 canonical values (REQ-COMPARE-005) and the fallback behavior for an unmapped INPUT string.
 - Sync job has not yet run / the Supabase player-data table is empty at fresh deployment — falls back to the REQ-SELECT-004 empty-pool state (no round starts) until the first sync job run populates the table; this is consistent existing behavior, not a new failure mode.
 - Rapid repeated guess submissions for the same round (double-submit) — not a hard requirement in spec.md; recorded here as a forward-looking check (§D.6), not a must-pass AC for this SPEC.
@@ -128,10 +144,10 @@ Minimum 2 required; 19 provided covering every requirement module in `spec.md` �
 | AC-GAME-CORE-003 | REQ-SELECT-004 | Empty pool does not start a round | Unit test |
 | AC-GAME-CORE-004 | REQ-COMPARE-001, 002 | A submitted guess returns one comparison row covering exactly 5 attributes | Unit test — `lib/game/comparison-engine.ts` |
 | AC-GAME-CORE-005 | REQ-COMPARE-003 | Categorical attributes (nationality/club/position) return correct/incorrect only, no direction | Unit test |
-| AC-GAME-CORE-006 | REQ-COMPARE-004 | Numeric attributes (age/squad number) return a directional indicator on mismatch | Unit test |
+| AC-GAME-CORE-006 | REQ-COMPARE-004 | Numeric attributes (age, squad number) return a directional indicator on mismatch | Unit test |
 | AC-GAME-CORE-007 | REQ-COMPARE-005 | Every player's position is classified as exactly one of FW/MF/DF/GK | Unit test against a mock provider fixture with a granular raw position string |
 | AC-GAME-CORE-008 | REQ-COMPARE-006, REQ-GUESS-006 | Duplicate guess returns the identical comparison result and still consumes an attempt | Integration test — `tests/integration/guess-flow.test.ts` |
-| AC-GAME-CORE-009 | REQ-COMPARE-007 | Missing/incomplete synced attribute data is marked unavailable in the comparison result, does not fail the guess | Unit test — mock Supabase fixture with a null age/squad-number field |
+| AC-GAME-CORE-009 | REQ-COMPARE-007 | Missing/incomplete synced attribute data is marked unavailable in the comparison result, does not fail the guess | Unit test — mock Supabase fixture with a null age or squad_number field |
 | AC-GAME-CORE-010 | REQ-GUESS-001 | Guess submission records an attempt and invokes the comparison engine | Unit test — response shape assertion |
 | AC-GAME-CORE-011 | REQ-GUESS-002 | Correct guess ends the round won immediately at any attempt count, Korean name shown | Integration test |
 | AC-GAME-CORE-012 | REQ-GUESS-003 | Incorrect guess with attempts remaining keeps the round active | Integration test |
@@ -150,12 +166,15 @@ Minimum 2 required; 19 provided covering every requirement module in `spec.md` �
 | AC-GAME-CORE-025 | REQ-REPLAY-003 | Duplicate-avoidance reapplied on immediate replay | Integration test (composes AC-GAME-CORE-001) |
 | AC-GAME-CORE-026 | REQ-NFR-001 | Provider API key never present in client-reachable code/response | Static grep check (§D.4), not a runtime test |
 | AC-GAME-CORE-027 | REQ-SYNC-001 | No live gameplay handler or API route (including the player search module) imports/calls `lib/football-api/` directly | Static grep check (`plan.md` §E) |
-| AC-GAME-CORE-028 | REQ-SYNC-002 | Sync job fetches the PL 2026/27 pool + attribute data (including age, squad number) via the `FootballDataProvider` abstraction and writes/refreshes the Supabase player-data table | Integration test against a mock provider adapter + a test Supabase instance/mock |
+| AC-GAME-CORE-028 | REQ-SYNC-002 | Sync job fetches the PL 2026/27 pool + attribute data (including age) via the `FootballDataProvider` abstraction and writes/refreshes the Supabase player-data table | Integration test against a mock provider adapter + a test Supabase instance/mock |
 | AC-GAME-CORE-029 | REQ-SYNC-003 | Player selection, player search, and comparison engine source pool/attribute data exclusively from Supabase | Unit test — assert no direct provider call from any live-path module |
+| AC-GAME-CORE-030 | REQ-SYNC-004 | Squad numbers are populated via a manual entry process keyed by player id, never via the periodic sync job | Unit test — manual entry script behavior, plus a static grep confirming `lib/player-data-sync/sync.ts` never calls it |
+| AC-GAME-CORE-031 | REQ-SYNC-005 | Sync job's upsert payload never includes `squad_number`; a manually-entered value survives a sync run unchanged | Integration test against a mock provider adapter + a test Supabase instance/mock — assert `squad_number` column untouched after sync |
+| AC-GAME-CORE-032 | REQ-SELECT-005 | Target-player selection pool restricted to players with both a Korean name mapping and a registered squad number | Unit test — `lib/game/player-selector.ts`, mock pool fixture with partially-registered players |
 
 ### §D.2 Severity Classification
 
-- **Must-pass (blocks Definition of Done):** AC-GAME-CORE-001 through 016, 018 through 027, and 029 (27 of 29 rows) — every core-loop, comparison-engine, guess-submission, search/autocomplete, Korean-mapping-resolution, replay, and sync-sourcing-boundary behavior, plus the API-key-protection check.
+- **Must-pass (blocks Definition of Done):** AC-GAME-CORE-001 through 016, 018 through 027, and 029 through 032 (30 of 32 rows) — every core-loop, comparison-engine, guess-submission, search/autocomplete, Korean-mapping-resolution, replay, sync-sourcing-boundary, and (0.5.0) squad-number manual-maintenance/no-overwrite/pool-restriction behavior, plus the API-key-protection check.
 - **Should-pass (recorded, non-blocking for this SPEC's closure if deferred with justification):** AC-GAME-CORE-017 (the one-time seed bootstrap integration test may depend on a test Supabase instance being available in CI/local — if unavailable at run-phase, a manual verification note plus a follow-up ticket is an acceptable substitute, but the seed script itself must still exist and be unit-testable in isolation); AC-GAME-CORE-028 (the sync-job integration test carries the same test-Supabase-instance dependency as AC-GAME-CORE-017 — the same substitution path applies, but the sync job itself must still exist and be unit-testable against the mock `FootballDataProvider` adapter in isolation).
 
 ### §D.3 Traceability (REQ → AC → Test)
@@ -184,6 +203,7 @@ All of the following must hold before this SPEC's run-phase is considered comple
 - No live gameplay request handler (player selection, player search, guess submission, or their `app/api/` routes) imports or calls `lib/football-api/` directly — verified by the static grep check in `plan.md` §E (REQ-SYNC-001, AC-GAME-CORE-027).
 - The `plan.md` §E residual-hint-terminology grep (`grep -rin "hint" lib/ app/ types/`) returns zero matches, confirming the 0.3.0 mechanic replacement left no stale naming in implemented code.
 - The position-taxonomy keyword-classification rule (`plan.md` §B) is implemented per REQ-COMPARE-005, with its keyword list validated/expanded against real football-data.org response data at M3 (`plan.md` §F) before this closure gate is considered met.
+- The `plan.md` §E squad-number-sync-omission grep (`grep -n "squadNumber\|squad_number" lib/player-data-sync/sync.ts`) confirms the sync job's upsert payload never writes `squad_number`, confirming REQ-SYNC-005 (0.5.0).
 
 ### §D.6 Forward-Looking Checks
 
