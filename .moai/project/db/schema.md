@@ -1,14 +1,15 @@
 ---
-engine: _TBD_
-orm: _TBD_
-last_synced_at: _TBD_
+engine: postgres
+orm: none (raw @supabase/supabase-js client)
+last_synced_at: 2026-08-14
 manifest_hash: _TBD_
 ---
 
 # Database Schema
 
-_TBD — Run `/moai db init` to configure the database engine and ORM, then edit this file or let
-the auto-sync hook populate it from your migration files._
+Supabase (Postgres) project. Runtime source of truth for the Premier League 2026/27 season
+player pool (SPEC-GAME-CORE-001 §F M4) and, in a future milestone (M5), the Korean name
+mapping table. See `.moai/project/db/migrations.md` for the applied/pending migration list.
 
 ---
 
@@ -18,14 +19,7 @@ the auto-sync hook populate it from your migration files._
 
 | Table | Description |
 |-------|-------------|
-| _TBD_ | _TBD_ |
-
-<!--
-Example:
-| users | Core user account table — authentication identity |
-| posts | User-authored content items |
-| comments | Threaded comment entries linked to posts |
--->
+| players | Premier League 2026/27 season player pool + the 5 compared attributes (nationality, club, position, age, squad number), synced by the periodic M4 sync job (`lib/player-data-sync/`) from football-data.org. Sole runtime source for player selection (M7), player search (M6), and the comparison engine (M2) — REQ-SYNC-003. |
 
 ---
 
@@ -44,6 +38,9 @@ Example:
 | users | roles    | N:M | user_roles table | Via junction table |
 -->
 
+No cross-table relationships yet — `players` is currently the only table (M4). A future M5
+Korean-name-mapping table is expected to reference `players.id`.
+
 ---
 
 ## Indexes
@@ -52,14 +49,7 @@ Example:
 
 | Table | Columns | Type | Purpose |
 |-------|---------|------|---------|
-| _TBD_ | _TBD_ | _TBD_ | _TBD_ |
-
-<!--
-Example:
-| users | email          | UNIQUE  | Enforce unique emails for login |
-| posts | (user_id, created_at) | COMPOSITE | Paginated user post queries |
-| posts | title          | GIN/FTS | Full-text search on post titles |
--->
+| players | season | INDEX | Supports a future multi-season filter/history query without a table scan (single-season scope for this SPEC — spec.md §D). |
 
 ---
 
@@ -69,11 +59,6 @@ Example:
 
 | Table | Constraint | Type | Definition |
 |-------|-----------|------|-----------|
-| _TBD_ | _TBD_ | _TBD_ | _TBD_ |
-
-<!--
-Example:
-| users | users_email_unique | UNIQUE | email must be unique |
-| posts | posts_status_check | CHECK  | status IN ('draft', 'published', 'archived') |
-| bookings | no_overlap        | EXCLUSION | daterange(start_at, end_at) with &&  |
--->
+| players | players_pkey | PRIMARY KEY | `id` (football-data.org's numeric person id) — also the sync job's upsert conflict target |
+| players | players_position_check | CHECK | `position IN ('FW', 'MF', 'DF', 'GK')` — the canonical 4-value position taxonomy (REQ-COMPARE-005); defense-in-depth, the M4 sync job already guarantees this before writing |
+| players | (column-level) | NOT NULL | `name`, `position`, `season` are required on every row; all other attribute columns (`club`, `nationality`, `age`, `squad_number`, `photo_url`) are nullable to model incomplete synced data (REQ-COMPARE-007) |

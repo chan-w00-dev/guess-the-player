@@ -26,7 +26,7 @@ List migrations that exist in the codebase but have not yet been applied to prod
 
 | Filename | Created At | Description | Blocking? |
 |----------|-----------|-------------|-----------|
-| _TBD_ | _TBD_ | _TBD_ | _TBD_ |
+| supabase/migrations/0001_create_players_table.sql | 2026-08-14 | Creates the `players` table (SPEC-GAME-CORE-001 §F M4) — PL 2026/27 season pool + 5 compared attributes, populated by the periodic sync job. Run manually via the Supabase Dashboard SQL Editor (see the migration file's own header comment for the exact steps); the implementing agent had no live-DB credentials and could not apply it directly. | Yes — the M4 sync job and every live gameplay read path (M6/M7/M2) depend on this table existing. |
 
 <!--
 Example:
