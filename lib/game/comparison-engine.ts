@@ -4,7 +4,7 @@
  * SPEC-GAME-CORE-001 §F M2.
  *
  * Scope note (M2 vs M8 boundary): this module computes ONLY the per-guess
- * 4-attribute {@link ComparisonResult} for a single (guess, target) pair. It
+ * 5-attribute {@link ComparisonResult} for a single (guess, target) pair. It
  * does NOT decide round win/loss, does NOT mutate {@link RoundState}, and
  * does NOT increment an attempt count — those are M8 (guess-service)
  * concerns per plan.md §F M2 vs M8: "Wires together M2 (comparison), ...
@@ -35,7 +35,7 @@ import {
 
 /**
  * Compares a guessed player against the current round's target player
- * across all 4 REQ-COMPARE-001 attributes and returns one comparison
+ * across all 5 REQ-COMPARE-001 attributes and returns one comparison
  * result row (REQ-COMPARE-002).
  *
  * Pure function: no side effects, no hidden state. The same (guess, target)
@@ -76,9 +76,9 @@ function compareCategorical(
 }
 
 /**
- * The numeric attribute (age) additionally carries a directional indicator
- * on mismatch, showing whether the target's value is higher or lower than
- * the guessed player's value (REQ-COMPARE-004).
+ * The two numeric attributes (age, squadNumber) additionally carry a
+ * directional indicator on mismatch, showing whether the target's value is
+ * higher or lower than the guessed player's value (REQ-COMPARE-004).
  */
 function compareNumeric(
   attribute: NumericAttribute,
@@ -120,5 +120,7 @@ function getNumericValue(attribute: NumericAttribute, player: Player): number | 
   switch (attribute) {
     case "age":
       return player.age;
+    case "squadNumber":
+      return player.squadNumber;
   }
 }

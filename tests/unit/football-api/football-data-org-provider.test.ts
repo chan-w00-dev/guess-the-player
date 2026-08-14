@@ -91,6 +91,7 @@ describe("FootballDataOrgProvider — response-to-Player mapping correctness", (
       position: "FW",
       nationality: "Norway",
       age: 26,
+      squadNumber: null,
     });
   });
 
@@ -167,6 +168,44 @@ describe("FootballDataOrgProvider — response-to-Player mapping correctness", (
     expect(pool[0].age).toBeNull();
     expect(pool[0].nationality).toBeNull();
     expect(pool[0].position).toBe("MF");
+    expect(pool[0].squadNumber).toBeNull();
+  });
+});
+
+describe("FootballDataOrgProvider — squadNumber always null (spec.md HISTORY 0.4.0/0.5.0)", () => {
+  it("maps squadNumber to null unconditionally, never derived from any raw response field", async () => {
+    const fetchImpl = vi.fn(async () =>
+      jsonResponse({
+        teams: [
+          {
+            name: "Manchester City",
+            squad: [
+              {
+                id: 8464,
+                name: "Erling Haaland",
+                position: "Centre-Forward",
+                dateOfBirth: "2000-07-21",
+                nationality: "Norway",
+                // A raw shirtNumber field, if it ever appeared, must never
+                // be read — football-data.org's free tier does not supply
+                // it, and squad number is manually maintained only
+                // (REQ-SYNC-004).
+                shirtNumber: 9,
+              },
+            ],
+          },
+        ],
+      }),
+    );
+    const provider = new FootballDataOrgProvider({
+      apiKey: "k",
+      fetchImpl,
+      referenceDate: new Date("2026-08-14T00:00:00Z"),
+    });
+
+    const pool = await provider.fetchPlayerPool();
+
+    expect(pool[0].squadNumber).toBeNull();
   });
 });
 

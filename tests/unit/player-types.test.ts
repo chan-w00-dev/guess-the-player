@@ -45,6 +45,7 @@ describe("Player domain type (types/player.ts)", () => {
       position: "FW",
       nationality: "South Korea",
       age: 33,
+      squadNumber: 7,
       photo: "https://example.com/son.jpg",
     };
 
@@ -60,12 +61,13 @@ describe("Player domain type (types/player.ts)", () => {
       position: "MF",
       nationality: "England",
       age: 21,
+      squadNumber: 44,
     };
 
     expect(player.photo).toBeUndefined();
   });
 
-  it("allows nullable club/nationality/age for incomplete synced data (REQ-COMPARE-007)", () => {
+  it("allows nullable club/nationality/age/squadNumber for incomplete synced data (REQ-COMPARE-007)", () => {
     const player: Player = {
       id: "p-3",
       name: "Unconfirmed Transfer",
@@ -73,11 +75,13 @@ describe("Player domain type (types/player.ts)", () => {
       position: "DF",
       nationality: null,
       age: null,
+      squadNumber: null,
     };
 
     expect(player.club).toBeNull();
     expect(player.nationality).toBeNull();
     expect(player.age).toBeNull();
+    expect(player.squadNumber).toBeNull();
   });
 
   it("still requires position to always be one of the 4 canonical values, never null", () => {
@@ -92,6 +96,7 @@ describe("Player domain type (types/player.ts)", () => {
       position,
       nationality: "France",
       age: 29,
+      squadNumber: 1,
     };
 
     expect(isPosition(player.position)).toBe(true);

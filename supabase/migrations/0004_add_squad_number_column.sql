@@ -1,0 +1,47 @@
+-- Migration: 0004_add_squad_number_column.sql
+-- SPEC-GAME-CORE-001 §HISTORY 0.5.0 — Squad Number Reinstated as a Manually-Maintained Attribute
+--
+-- Re-adds the `squad_number` column to `public.players`, reversing
+-- 0002_drop_squad_number.sql. The 0.4.0 finding that motivated the drop is
+-- UNCHANGED: football-data.org's free tier still never supplies shirt/
+-- squad-number data (confirmed 0.4.0). What changed is the operating model
+-- — the user runs a self-hosted Supabase project and is willing to manually
+-- maintain squad numbers (REQ-SYNC-004), the same way Korean name mappings
+-- are manually maintained (M5). This column is idempotent to re-add
+-- (`add column if not exists`) so this migration is safe to run even if a
+-- prior partial application already added it.
+--
+-- HOW SQUAD NUMBERS ARE POPULATED (REQ-SYNC-004, REQ-SYNC-005) — read this
+-- before running the migration below:
+--   * NEVER via the periodic sync job (`lib/player-data-sync/sync.ts`) — its
+--     upsert payload type (`PlayerRow`, `lib/player-data-sync/types.ts`)
+--     structurally excludes `squad_number`, so a sync run can never write or
+--     overwrite this column, protecting any manually-entered value.
+--   * ONLY via the manual entry mechanism in `lib/squad-number/`, run via
+--     `npm run update:squad-number -- --id=<player id> --number=<squad
+--     number>` (see `scripts/update-squad-numbers.ts`). This performs a
+--     targeted `update players set squad_number = ? where id = ?` for one
+--     player (or a small batch) at a time — it does NOT read a bundled,
+--     checked-in seed dataset file the way `npm run seed:korean-names` does
+--     (spec.md §D "Out of Scope — Squad Number Administration Tooling"
+--     explicitly excludes a seed-and-replace bulk-import pattern for this
+--     column). The `id` is the numeric `players.id` primary key (the
+--     football-data.org person id) — look it up via
+--     `select id, name from public.players where name = '<player name>';`
+--     in the Supabase SQL Editor before running the script.
+--
+-- HOW TO RUN THIS MIGRATION (manual — no DB credentials are available to
+-- the implementing agent, so this file is NOT executed automatically):
+--   1. Open the Supabase Dashboard for your project.
+--   2. Go to the SQL Editor.
+--   3. Paste the full contents of this file.
+--   4. Click "Run".
+--   5. Verify: `select column_name from information_schema.columns
+--      where table_schema = 'public' and table_name = 'players' and
+--      column_name = 'squad_number';` returns exactly one row.
+--   6. Populate squad numbers for the players you want playable, one at a
+--      time (or a small batch), via `npm run update:squad-number` as
+--      described above — this is an ongoing operational responsibility, not
+--      a one-time bootstrap step.
+
+alter table public.players add column if not exists squad_number integer;

@@ -53,6 +53,7 @@ describe("runPlayerDataSync — successful full-pool sync", () => {
         position: "MF",
         nationality: "Testland",
         age: 24,
+        squadNumber: 10,
         photo: "https://example.com/photo.jpg",
       },
     ]);
@@ -83,6 +84,7 @@ describe("runPlayerDataSync — successful full-pool sync", () => {
         position: "DF",
         nationality: null,
         age: null,
+        squadNumber: null,
       },
     ]);
     const { supabase, calls } = fakeSupabase(() => ({ error: null }));
@@ -93,6 +95,52 @@ describe("runPlayerDataSync — successful full-pool sync", () => {
     expect(calls[0].club).toBeNull();
     expect(calls[0].nationality).toBeNull();
     expect(calls[0].age).toBeNull();
+  });
+});
+
+describe("runPlayerDataSync — squad_number omission (REQ-SYNC-005, AC-GAME-CORE-031)", () => {
+  it("never includes a squad_number key in the upsert payload, even when Player.squadNumber is set", async () => {
+    const provider = fakeProvider([
+      {
+        id: "1001",
+        name: "Has A Squad Number",
+        club: "Test FC",
+        position: "MF",
+        nationality: "Testland",
+        age: 24,
+        squadNumber: 9,
+      },
+    ]);
+    const { supabase, calls } = fakeSupabase(() => ({ error: null }));
+
+    await runPlayerDataSync({ provider, supabase });
+
+    expect(calls).toHaveLength(1);
+    expect(Object.prototype.hasOwnProperty.call(calls[0], "squad_number")).toBe(false);
+    expect(Object.keys(calls[0]).sort()).toEqual(
+      [
+        "age",
+        "club",
+        "id",
+        "name",
+        "nationality",
+        "photo_url",
+        "position",
+        "season",
+        "synced_at",
+      ].sort(),
+    );
+  });
+
+  it("never includes squad_number even when Player.squadNumber is null", async () => {
+    const provider = new MockFootballDataProvider();
+    const { supabase, calls } = fakeSupabase(() => ({ error: null }));
+
+    await runPlayerDataSync({ provider, supabase });
+
+    for (const row of calls) {
+      expect(Object.prototype.hasOwnProperty.call(row, "squad_number")).toBe(false);
+    }
   });
 });
 
@@ -129,9 +177,33 @@ describe("runPlayerDataSync — season and synced_at stamping (REQ-SYNC-002)", (
 describe("runPlayerDataSync — partial failure resilience", () => {
   it("continues past a single player's upsert error and reports it in errors, without throwing", async () => {
     const provider = fakeProvider([
-      { id: "1", name: "Player One", club: "A", position: "FW", nationality: "X", age: 20 },
-      { id: "2", name: "Player Two", club: "B", position: "MF", nationality: "Y", age: 22 },
-      { id: "3", name: "Player Three", club: "C", position: "DF", nationality: "Z", age: 25 },
+      {
+        id: "1",
+        name: "Player One",
+        club: "A",
+        position: "FW",
+        nationality: "X",
+        age: 20,
+        squadNumber: 11,
+      },
+      {
+        id: "2",
+        name: "Player Two",
+        club: "B",
+        position: "MF",
+        nationality: "Y",
+        age: 22,
+        squadNumber: 22,
+      },
+      {
+        id: "3",
+        name: "Player Three",
+        club: "C",
+        position: "DF",
+        nationality: "Z",
+        age: 25,
+        squadNumber: 33,
+      },
     ]);
     const { supabase, calls } = fakeSupabase((row) =>
       row.id === 2 ? { error: { message: "constraint violation" } } : { error: null },
@@ -151,8 +223,24 @@ describe("runPlayerDataSync — partial failure resilience", () => {
 
   it("catches a thrown exception from upsert (not just a returned error) and continues", async () => {
     const provider = fakeProvider([
-      { id: "1", name: "Player One", club: "A", position: "FW", nationality: "X", age: 20 },
-      { id: "2", name: "Player Two", club: "B", position: "MF", nationality: "Y", age: 22 },
+      {
+        id: "1",
+        name: "Player One",
+        club: "A",
+        position: "FW",
+        nationality: "X",
+        age: 20,
+        squadNumber: 11,
+      },
+      {
+        id: "2",
+        name: "Player Two",
+        club: "B",
+        position: "MF",
+        nationality: "Y",
+        age: 22,
+        squadNumber: 22,
+      },
     ]);
     const supabase: SupabaseLike = {
       from(table) {
@@ -177,7 +265,15 @@ describe("runPlayerDataSync — partial failure resilience", () => {
 
   it("stringifies a non-Error thrown value (e.g. a plain string reject reason)", async () => {
     const provider = fakeProvider([
-      { id: "1", name: "Player One", club: "A", position: "FW", nationality: "X", age: 20 },
+      {
+        id: "1",
+        name: "Player One",
+        club: "A",
+        position: "FW",
+        nationality: "X",
+        age: 20,
+        squadNumber: 11,
+      },
     ]);
     const supabase: SupabaseLike = {
       from(table) {

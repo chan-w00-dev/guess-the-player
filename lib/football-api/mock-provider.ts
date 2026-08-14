@@ -28,6 +28,7 @@ const MOCK_PLAYERS: readonly Player[] = [
     position: "FW",
     nationality: "Norway",
     age: 25,
+    squadNumber: 9,
   },
   {
     id: "mock-2",
@@ -36,6 +37,7 @@ const MOCK_PLAYERS: readonly Player[] = [
     position: "FW",
     nationality: "South Korea",
     age: 33,
+    squadNumber: 7,
   },
   {
     id: "mock-3",
@@ -44,6 +46,7 @@ const MOCK_PLAYERS: readonly Player[] = [
     position: "MF",
     nationality: "Belgium",
     age: 34,
+    squadNumber: 17,
   },
   {
     id: "mock-4",
@@ -52,6 +55,7 @@ const MOCK_PLAYERS: readonly Player[] = [
     position: "DF",
     nationality: "Netherlands",
     age: 34,
+    squadNumber: 4,
   },
   {
     id: "mock-5",
@@ -60,6 +64,7 @@ const MOCK_PLAYERS: readonly Player[] = [
     position: "GK",
     nationality: "Brazil",
     age: 33,
+    squadNumber: 1,
   },
 ];
 

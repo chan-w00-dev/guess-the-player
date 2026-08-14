@@ -144,5 +144,12 @@ function mapRawPlayer(
     position,
     nationality: raw.nationality ?? null,
     age: raw.dateOfBirth ? computeAge(raw.dateOfBirth, referenceDate) : null,
+    // squadNumber is never provided by football-data.org's free tier
+    // (confirmed live, spec.md HISTORY 0.4.0, unchanged by the 0.5.0
+    // reinstatement) — always a literal `null` here, never derived from a
+    // raw provider field. Squad number is populated exclusively via the
+    // manual entry process (REQ-SYNC-004, `lib/squad-number/`), not by this
+    // provider or the M4 sync job that consumes it.
+    squadNumber: null,
   };
 }

@@ -53,6 +53,20 @@ export interface PlayerDataSyncSummary {
   errors: string[];
 }
 
+/**
+ * Maps a synced {@link Player} onto the sync job's upsert payload shape.
+ *
+ * Deliberately omits `squad_number` (REQ-SYNC-005, spec.md HISTORY 0.5.0):
+ * `player.squadNumber` is NEVER read here, even though `Player` carries the
+ * field again as of the 0.5.0 reinstatement. Squad numbers are populated
+ * exclusively by the manual entry mechanism (`lib/squad-number/`), and this
+ * upsert runs on every periodic sync — if `squad_number` were included, a
+ * manually-entered value would be silently wiped to null on the very next
+ * sync run, since football-data.org never returns this field (confirmed
+ * 0.4.0). `PlayerRow` (see `./types.ts`) structurally has no `squad_number`
+ * field at all, so this omission is enforced at the type level, not just by
+ * convention.
+ */
 function toPlayerRow(player: Player, season: string, syncedAt: string): PlayerRow {
   return {
     id: Number(player.id),

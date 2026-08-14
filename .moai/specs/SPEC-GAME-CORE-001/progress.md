@@ -97,11 +97,112 @@ PASS/FAIL matrix is populated progressively as later milestones close it out
 | Lint | `npx eslint .` | exit 0 |
 | Build | `npm run build` | exit 0 — static `/` and `/_not-found` routes |
 
-### AC PASS/FAIL Matrix
+### M1/M2/M4 — 0.5.0 Squad Number Re-addition Pass (status: complete)
 
-_Not yet populated — see the M1 status note above. None of the 29 ACs in
-`acceptance.md` §D.1 are verifiable from types alone; population begins once
-M2 (comparison engine) lands._
+Code re-addition pass required by the `progress.md` §E.1 0.5.0 revision entry
+(restoring the git-history-reusable squad-number type/comparison logic,
+re-adding the Supabase `squad_number` column via a new migration, and
+creating the manual squad-number entry mechanism), delegated to
+`manager-develop` (cycle_type=tdd) as a standalone run-phase task. Does NOT
+implement REQ-SELECT-005 (target-pool filter) — that is explicitly M7 scope,
+not yet built.
+
+**Delivered:**
+- `types/player.ts` — `Player.squadNumber: number | null` restored (adapted
+  from git history `9a7d6f4^`, doc comments updated to the current file's
+  0.4.0/0.5.0 HISTORY-aware style rather than pasted verbatim).
+- `types/comparison.ts` — `"squadNumber"` restored to `COMPARISON_ATTRIBUTES`
+  (now 5) and `NUMERIC_ATTRIBUTES` (now 2); module doc comments updated from
+  "four attributes" back to "five attributes".
+- `lib/game/comparison-engine.ts` — `squadNumber` case restored in
+  `getNumericValue()`'s switch, same directional-comparison treatment as
+  `age`.
+- `lib/football-api/football-data-org-provider.ts` — `squadNumber: null` set
+  unconditionally (a literal, never derived from any raw provider field,
+  including a defensive test asserting a raw `shirtNumber` field is never
+  read even if present) — football-data.org's free tier still never
+  supplies this data (confirmed 0.4.0, unchanged).
+- `lib/football-api/mock-provider.ts` — 5 mock fixtures updated with
+  test-appropriate `squadNumber` values.
+- `lib/player-data-sync/sync.ts` / `types.ts` — **critical constraint
+  (REQ-SYNC-005)**: `toPlayerRow()` and `PlayerRow` both deliberately
+  continue to omit `squad_number`; added explanatory doc comments plus a
+  dedicated negative-assertion test (`Object.prototype.hasOwnProperty.call(
+  calls[0], "squad_number")` is `false`) even when the source `Player` has a
+  non-null `squadNumber`.
+- `supabase/migrations/0004_add_squad_number_column.sql` — idempotent
+  `add column if not exists squad_number integer`, with a "HOW SQUAD NUMBERS
+  ARE POPULATED" instructions block (mirrors the `0001`/`0002` manual-run
+  style).
+- **New `lib/squad-number/` module** (types.ts, update.ts,
+  supabase-adapter.ts, index.ts) + `scripts/update-squad-numbers.ts` +
+  `npm run update:squad-number` — see the Constraint Deviation note below for
+  why this module's shape differs from the delegation prompt's literal
+  Section D item 8 instructions.
+- 60 new/updated tests across 9 files (216 total, up from prior baseline).
+
+**Constraint Deviation (flagged for review) — squad-number entry mechanism
+shape:** The delegation prompt's Section D item 8 asked for a module
+mirroring the M5 Korean-name-mapping module's shape 1:1: a bundled,
+checked-in `data/squad-number-seed.json` dataset (name-keyed, reusing the 24
+`korean-name-seed.json` players) plus `scripts/seed-squad-numbers.ts`
+resolving name → id internally. **This directly conflicts with the current
+SPEC text**, which is explicit and internally consistent on this point:
+- `spec.md` §D "Out of Scope — Squad Number Administration Tooling": *"Bulk-
+  import tooling beyond the manual, per-player entry mechanism — squad
+  number is maintained one player at a time, keyed by player id, **not via a
+  seed-and-replace dataset like the Korean mapping table**."*
+- `plan.md` §B "Resolved — Squad Number Reinstated": *"a script keyed by
+  player `id` (**NOT by name, unlike M5's** `scripts/seed-korean-names.ts`
+  ...) ... a targeted per-player `UPDATE players SET squad_number = ? WHERE
+  id = ?` operation (or a small batch script accepting an `{id,
+  squadNumber}` list), **not a bulk-seed-and-replace pattern like the Korean
+  mapping table**."*
+- `acceptance.md` AC-GAME-CORE-030 verification column: *"manual entry
+  script behavior"* — id-keyed, consistent with the above.
+
+Per Agent Core Behavior #3 (Push Back When Warranted) and the SPEC Artifact
+Ownership blocker-report obligation, this implementation followed the
+SPEC's explicit, self-consistent, detailed design (id-keyed
+`SquadNumberEntry[]`, CLI-arg small-batch input via
+`--id=/--number=` or `--entries='<json>'`, NO bundled repo-committed seed
+dataset) rather than the delegation prompt's literal file/script shape.
+`data/squad-number-seed.json` and `scripts/seed-squad-numbers.ts` were
+**deliberately NOT created**. Real squad-number values for the eventual
+REQ-SELECT-005 (M7) intersection pool are therefore NOT pre-populated by
+this pass — populating them is the SPEC owner's manual operational
+responsibility per REQ-SYNC-004, to be performed via `npm run
+update:squad-number` after this pass merges. Requesting confirmation this
+resolution is correct, or an explicit override to build the seed-and-replace
+form instead.
+
+**Self-verification (evidence — see this milestone's commit for full
+command output):**
+
+| Check | Command | Result |
+|---|---|---|
+| Tests | `npx vitest run` | PASS — 19 files, 216 tests, 0 failed |
+| Coverage | `npx vitest run --coverage` | 99.52% stmts / 97.65% branch / 100% funcs / 99.52% lines repo-wide (`types/**`, `lib/game/**`, `lib/player-data-sync/**`, `lib/football-api/**`, `lib/squad-number/**` all fully covered — not listed as a sub-100% row in the v8 text reporter) — exceeds the 85%/80% quality.yaml thresholds |
+| Type-check | `npx tsc --noEmit` | exit 0 |
+| Lint | `npx eslint .` | exit 0 (1 pre-existing unrelated warning on a generated `coverage/` artifact) |
+| Build | `npm run build` | exit 0 |
+| Sync-exclusion grep (REQ-SYNC-005) | `grep -n "squad_number\|squadNumber" lib/player-data-sync/sync.ts lib/player-data-sync/types.ts` | 8 matches, all inside doc comments — zero matches in the `PlayerRow` field list or the `.upsert()` object literal |
+
+### AC PASS/FAIL Matrix (0.5.0-added/widened ACs — this pass only)
+
+| AC | Status | Verification | Actual Output |
+|---|---|---|---|
+| AC-GAME-CORE-004 | PASS | `npx vitest run tests/unit/comparison-engine.test.ts` | "returns exactly 5 attribute outcomes covering every COMPARISON_ATTRIBUTES entry" — PASS |
+| AC-GAME-CORE-006 | PASS | same file | "numeric mismatch direction also applies to squadNumber independently of age" + the higher/lower counterpart — both PASS |
+| AC-GAME-CORE-009 | PASS | same file | "marks squadNumber unavailable when the guessed/target player's value is null, with no direction" — both PASS |
+| AC-GAME-CORE-030 | PASS | `npx vitest run tests/unit/squad-number/` | 24 tests PASS (update.test.ts, supabase-adapter.test.ts, parse-args.test.ts) — id-keyed, never name-keyed; static grep confirms `lib/player-data-sync/sync.ts` never imports/calls `lib/squad-number/` |
+| AC-GAME-CORE-031 | PASS | `npx vitest run tests/unit/player-data-sync/sync.test.ts` | "never includes a squad_number key in the upsert payload, even when Player.squadNumber is set" + the null-squadNumber counterpart — both PASS |
+| AC-GAME-CORE-032 | N/A (deferred to M7) | — | REQ-SELECT-005 target-pool filter is explicitly out of scope for this delegation (M7 — Player Selection Engine — not yet built) |
+
+_Remaining ACs in `acceptance.md` §D.1 are owned by other milestones (M2 core
+comparison behavior beyond the squad-number widening above, M5 Korean
+mapping, M6 search, M7 selection, M8 guess submission) and are not
+re-verified by this entry._
 
 ## §E.3 Run-phase Audit-Ready Signal
 

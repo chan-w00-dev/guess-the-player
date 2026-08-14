@@ -13,12 +13,19 @@
 import type { Player } from "./player";
 
 /**
- * The four compared/synced attributes (REQ-COMPARE-001, REQ-SYNC-002).
- * Squad number was removed (spec.md HISTORY 0.4.0) — football-data.org's
- * free tier does not supply it, and age is the sole numeric/directional
- * attribute.
+ * The five compared/synced attributes (REQ-COMPARE-001, REQ-SYNC-002).
+ * Squad number was removed in spec.md HISTORY 0.4.0 (football-data.org's
+ * free tier does not supply it) and reinstated in HISTORY 0.5.0 as a
+ * manually-maintained numeric attribute alongside age (REQ-SYNC-004) — see
+ * `types/player.ts` for the full rationale.
  */
-export const COMPARISON_ATTRIBUTES = ["nationality", "club", "position", "age"] as const;
+export const COMPARISON_ATTRIBUTES = [
+  "nationality",
+  "club",
+  "position",
+  "age",
+  "squadNumber",
+] as const;
 export type ComparisonAttribute = (typeof COMPARISON_ATTRIBUTES)[number];
 
 /** Attributes compared as an exact match indicator only, no direction (REQ-COMPARE-003). */
@@ -26,7 +33,7 @@ export const CATEGORICAL_ATTRIBUTES = ["nationality", "club", "position"] as con
 export type CategoricalAttribute = (typeof CATEGORICAL_ATTRIBUTES)[number];
 
 /** Attributes compared numerically with an optional direction on mismatch (REQ-COMPARE-004). */
-export const NUMERIC_ATTRIBUTES = ["age"] as const;
+export const NUMERIC_ATTRIBUTES = ["age", "squadNumber"] as const;
 export type NumericAttribute = (typeof NUMERIC_ATTRIBUTES)[number];
 
 /** Narrows a {@link ComparisonAttribute} to a {@link CategoricalAttribute}. */
