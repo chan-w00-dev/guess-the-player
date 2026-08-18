@@ -38,6 +38,9 @@ import { createSquadNumberSupabaseClient, runSquadNumberUpdate } from "../lib/sq
 
 const DEFAULT_IN_PATH = "data/player-review-export.csv";
 
+/** The UTF-8 byte-order mark — see {@link stripUtf8Bom}'s doc comment for why it's stripped here. */
+const UTF8_BOM = "﻿";
+
 /**
  * Parses `--in=<path>` from a raw argv-style string array. Exported as a
  * pure function for unit testing — never touches `process.argv` itself.
@@ -55,9 +58,25 @@ export function parseImportArgs(argv: string[]): { inPath: string } {
   return { inPath: flags.get("in") ?? DEFAULT_IN_PATH };
 }
 
+/**
+ * Strips a single leading UTF-8 byte-order mark from `csvText`, if present.
+ * Defensive on two fronts: (a) re-importing a file this tool itself
+ * exported, which now carries the BOM (see
+ * `scripts/export-players-for-review.ts`'s `withUtf8Bom` — Excel does not
+ * reliably auto-detect UTF-8 without a BOM on a direct file-open), and (b)
+ * importing a file the user edited and re-saved from Excel as "CSV UTF-8",
+ * which commonly also writes a BOM. Left unstripped, the BOM would corrupt
+ * the parsed header's first column name (`"﻿id"` instead of `"id"`),
+ * failing `parsePlayerReviewCsv`'s header-match check. Exported as a pure
+ * function for unit testing — never touches `fs.readFileSync` itself.
+ */
+export function stripUtf8Bom(csvText: string): string {
+  return csvText.startsWith(UTF8_BOM) ? csvText.slice(UTF8_BOM.length) : csvText;
+}
+
 async function main(): Promise<void> {
   const { inPath } = parseImportArgs(process.argv.slice(2));
-  const csvText = fs.readFileSync(inPath, "utf8");
+  const csvText = stripUtf8Bom(fs.readFileSync(inPath, "utf8"));
 
   const rows = parsePlayerReviewCsv(csvText);
   const { koreanMappings, squadNumberEntries } = buildReviewWriteBatches(rows);

@@ -34,6 +34,9 @@ import {
 
 const DEFAULT_OUT_PATH = "data/player-review-export.csv";
 
+/** The UTF-8 byte-order mark — see {@link withUtf8Bom}'s doc comment for why it's added here. */
+const UTF8_BOM = "﻿";
+
 /**
  * Parses `--out=<path>` from a raw argv-style string array. Exported as a
  * pure function for unit testing — never touches `process.argv` itself.
@@ -51,6 +54,24 @@ export function parseExportArgs(argv: string[]): { outPath: string } {
   return { outPath: flags.get("out") ?? DEFAULT_OUT_PATH };
 }
 
+/**
+ * Prepends the UTF-8 byte-order mark to `csvText`. Microsoft Excel's
+ * default CSV-open behavior (double-click / File > Open, as opposed to the
+ * explicit Data > Get Data > From Text/CSV import wizard) does not reliably
+ * auto-detect UTF-8 without a BOM — it falls back to the system's legacy
+ * codepage, corrupting any multi-byte UTF-8 character in a player name
+ * (e.g. "Ødegaard") into mojibake. The BOM signals Excel to treat the file
+ * as UTF-8 on open. This is a file-on-disk/Excel-consumption concern, so it
+ * is applied only at this script's file-write boundary — deliberately NOT
+ * inside `lib/player-review/export.ts`'s `toReviewCsvText` or
+ * `lib/csv/write.ts`'s `writeCsv`, which stay general-purpose, pure
+ * string-producing functions with no file-writing concern. Exported as a
+ * pure function for unit testing — never touches `fs.writeFileSync` itself.
+ */
+export function withUtf8Bom(csvText: string): string {
+  return `${UTF8_BOM}${csvText}`;
+}
+
 async function main(): Promise<void> {
   const { outPath } = parseExportArgs(process.argv.slice(2));
   const supabase = createPlayerReviewExportSupabaseClient();
@@ -62,7 +83,7 @@ async function main(): Promise<void> {
   if (outDir !== ".") {
     fs.mkdirSync(outDir, { recursive: true });
   }
-  fs.writeFileSync(outPath, csvText, "utf8");
+  fs.writeFileSync(outPath, withUtf8Bom(csvText), "utf8");
 
   console.log(`[export-players-for-review] wrote ${rows.length} row(s) to ${outPath}`);
 }
