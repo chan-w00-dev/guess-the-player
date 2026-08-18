@@ -273,6 +273,51 @@ valid, unmodified, and untouched by this milestone.
 | AC-GAME-CORE-034 | REQ-REVIEW-002 | PASS | `npx vitest run tests/unit/player-review/import-integration.test.ts` | Wires `buildReviewWriteBatches` output into the real `runKoreanNameSeed` (upserts keyed by original name) and the real `runSquadNumberUpdate` (updates keyed by numeric id) via fake Supabase clients mirroring `lib/korean-name-mapping/seed.test.ts`/`lib/squad-number/update.test.ts` — both reused functions receive exactly the expected calls — PASS |
 | AC-GAME-CORE-035 | REQ-REVIEW-003 | PASS | `npx vitest run tests/unit/player-review/import.test.ts` | A row with a blank `koreanName` cell (squadNumber filled) is excluded from `koreanMappings`; a row with a blank `squadNumber` cell (koreanName filled) is excluded from `squadNumberEntries`; both-blank and whitespace-only cells are excluded from both; a non-numeric squadNumber cell is skipped rather than producing a `NaN` entry — all PASS. `import-integration.test.ts` additionally confirms neither reused write function is ever called for a blank-cell row. |
 
+### M7 — Player Selection Engine (status: complete)
+
+Implements REQ-SELECT-001..005 (spec.md §B.1) — `selectTargetPlayer` is the
+sole entry point every round-start flow (M8 guess-submission service, the
+round-start API route, replay) will depend on to obtain a new round's target
+player.
+
+**New module:**
+- **`lib/game/player-selector.ts`** (co-located with the M2 comparison
+  engine) — `selectTargetPlayer({ supabase, excludePlayerId?, random? })`.
+  Applies the REQ-SELECT-005 pool filter (squad number present AND a Korean
+  name mapping exists) FIRST, before the REQ-SELECT-001 random pick ever
+  runs, via the same application-code players↔korean_name_mappings join
+  established by `lib/player-search/search.ts` / `lib/player-review/export.ts`
+  (no DB-level FK). REQ-SELECT-002/003 duplicate avoidance: excludes
+  `excludePlayerId` only when the eligible pool has more than one player,
+  always selecting the sole player when the pool has exactly one. REQ-SELECT-004:
+  an empty eligible pool (or a query error on either table) returns
+  `{ status: "empty-pool" }` — never throws, never starts a round. The
+  injected `random?: () => number` option (default `Math.random`) follows
+  the `now?: () => Date` injectable-non-determinism convention established
+  by `lib/player-data-sync/sync.ts`. Raw `position` strings are guarded by
+  `isPosition()` before trusting them, mirroring `lib/player-search/search.ts`'s
+  `toCandidate` defensive pattern.
+
+**Self-verification (evidence):**
+
+| Check | Command | Result |
+|---|---|---|
+| Tests | `npx vitest run` | PASS — 30 files, 295 tests, 0 failed (up from 280) |
+| Coverage | `npx vitest run --coverage` | Repo-wide 99.71% stmts / 98.18% branch / 100% funcs / 99.70% lines; `lib/game/player-selector.ts` itself is 100% stmts (30/30) / 100% branch (28/28) / 100% funcs (4/4), verified directly against the v8 `coverage-final.json` raw counts (not listed in the text-reporter's below-100% table) — exceeds the 85%/80% quality.yaml thresholds. The only sub-100%-stmts rows (`lib/player-review/import.ts`, `lib/player-search/search.ts`, both pre-existing, untouched by this milestone) are outside this milestone's scope. |
+| Type-check | `npx tsc --noEmit` | exit 0 (after removing 4 stale, gitignored `.next/types/*" 2.ts"` duplicate-artifact files left over from a prior build run — unrelated pre-existing build-cache noise, not caused by this milestone) |
+| Lint | `npx eslint .` | exit 0 (1 pre-existing unrelated warning on a generated `coverage/` artifact, same as the 0.5.0/M12 passes) |
+| Build | `npm run build` | exit 0 |
+| Sync-boundary grep (REQ-SYNC-001) | `grep -rln "lib/football-api" lib/game/player-selector.ts` | 0 matches |
+
+### AC PASS/FAIL Matrix (M7 — this pass only)
+
+| AC | REQ | Status | Verification | Actual Output |
+|---|---|---|---|---|
+| AC-GAME-CORE-001 | REQ-SELECT-001, 002 | PASS | `npx vitest run tests/unit/player-selector.test.ts` | Injected-RNG test on a 2-player eligible pool confirms `excludePlayerId` is excluded from the candidate set and the remaining player is always selected; a second test confirms the injected `random()` index maps to the corresponding candidate across a 2-player pool — PASS |
+| AC-GAME-CORE-002 | REQ-SELECT-003 | PASS | `npx vitest run tests/unit/player-selector.test.ts` | A 1-player eligible pool selects that player even when `excludePlayerId` matches it, both with an injected `random()` and with the default `Math.random` — PASS |
+| AC-GAME-CORE-003 | REQ-SELECT-004 | PASS | `npx vitest run tests/unit/player-selector.test.ts` | Zero-row pool, an eligible-after-filter-empty pool, and a Supabase query error on either table all return `{ status: "empty-pool" }` without throwing — PASS |
+| AC-GAME-CORE-032 | REQ-SELECT-005 | PASS | `npx vitest run tests/unit/player-selector.test.ts` | A mixed fixture (2 fully-registered + 1 missing-mapping + 1 missing-squad-number) is sampled across 5 injected `random()` values and never selects outside the fully-registered `{1,2}` id set; dedicated tests confirm a player missing only the mapping, or only the squad number, is excluded; a row failing the `isPosition()` guard is skipped defensively even when otherwise eligible — PASS |
+
 ## §E.3 Run-phase Audit-Ready Signal
 
 _<pending run-phase>_
