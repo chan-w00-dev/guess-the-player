@@ -2,9 +2,9 @@
 
 ## §E.1 Plan-phase Audit-Ready Signal
 
-plan_status: audit-ready (fresh audit cycle required — see 0.5.0 entry below)
+plan_status: audit-ready (fresh audit cycle required — see 0.6.0 entry below)
 plan_complete_at: 2026-08-13
-plan_revised_at: 2026-08-14
+plan_revised_at: 2026-08-18
 
 Plan-phase artifacts created: `spec.md`, `plan.md`, `acceptance.md`, `spec-compact.md` (this SPEC directory). GEARS requirements now cover 7 modules (player selection, attribute comparison engine, guess submission & attempt cap, Korean name mapping, player search & autocomplete, unlimited replay, player-data sourcing & sync) plus 4 non-functional requirements. Out of Scope section present with 8 `### Out of Scope — <topic>` sub-headings (as of the 0.5.0 revision below).
 
@@ -53,6 +53,20 @@ This is a scoped revision (not a full SPEC rewrite), reversing the 0.4.0 squad-n
 **Code re-addition pass required, delegated separately**: M1, M2, and M4 code already exists under the pre-0.5.0 4-attribute scope (`types/player.ts`, `types/comparison.ts`, `lib/game/comparison-engine.ts`, and `lib/player-data-sync/sync.ts`'s upsert payload), all implemented complete per the 0.4.0-era scope. This SPEC revision covers artifacts only — the corresponding code re-addition pass (restoring the git-history-reusable squad-number type/comparison logic, adding a new Supabase migration to re-add the `squad_number` column, modifying the M4 sync job's upsert to explicitly omit `squad_number`, and creating a new manual squad-number entry script keyed by player id) in the modules above is a separate, already-delegated run-phase task (manager-develop), not performed as part of this revision. M3 requires no code change — its "football-data.org does not supply squad-number data" statement remains true and unchanged, since the old provider fetch path is explicitly not revived.
 
 Tier: M (unchanged). Route: Hybrid Trunk main-direct (unchanged). This is a scoped revision of the 0.4.0 requirement set already pending a fresh plan-auditor cycle (carried forward from the 0.3.0 major revision) — the fresh-audit-cycle requirement noted above carries forward, now against the 0.5.0 requirement set.
+
+**0.6.0 scoped revision (2026-08-18) — combined CSV review workflow for Korean name + squad number:**
+
+This is a scoped revision (not a full SPEC rewrite), additive to the existing REQ-KOREAN-004 one-time seed process and REQ-SYNC-004/005 id-keyed manual squad-number entry mechanism — both remain valid, already-implemented, unchanged mechanisms. The user wants to manage the two manually-maintained columns (Korean name, squad number) the way a spreadsheet is managed: one combined CSV round-trip covering both fields together, id-keyed (removing the need to manually look up a player's id), editable in Excel/Google Sheets/Numbers.
+
+1. **New §B.8 module — Combined Player-Data Review Export/Import (CSV)**: `spec.md` §B.8 adds REQ-REVIEW-001..003 — (a) a review-export capability producing a CSV (`id, name, nationality, club, age, koreanName, squadNumber`) of the current player pool with known-attribute columns pre-filled and koreanName/squadNumber populated with current values or left blank; (b) a review-import capability that upserts a non-blank koreanName and updates a non-blank squadNumber per row, keyed by id; (c) blank-cell skip behavior — the import never overwrites an existing value with an empty/null value.
+2. **Narrowed `spec.md` §D "Out of Scope — Squad Number Administration Tooling"**: the prior 0.5.0 blanket bulk-import prohibition is revised to explicitly permit the id-keyed CSV round-trip CLI workflow (REQ-REVIEW-001..003), while continuing to exclude a web-based admin UI / hosted CRUD API (unrelated to this CLI mechanism, preserved as out of scope).
+3. **`plan.md` §B** — new "Resolved — Combined CSV Review Workflow..." subsection records the spreadsheet mental model rationale, the id-keyed round-trip design (no name-matching ambiguity, unlike REQ-KOREAN-001's runtime resolution), and the explicit reuse of the already-implemented `lib/korean-name-mapping/` upsert logic and `lib/squad-number/update.ts`'s `runSquadNumberUpdate` — no new/duplicated Supabase write path.
+4. **`plan.md` §F** — new M12 milestone (`scripts/export-players-for-review.ts`, `scripts/import-players-review.ts`, a minimal inline RFC4180-lite CSV parse/write utility, no new npm dependency).
+5. **`acceptance.md`** — 3 new must-pass scenarios/AC rows (23-25 / AC-GAME-CORE-033..035) covering export column/pre-fill correctness, import upsert-on-filled-cell behavior, and import skip-on-blank-cell behavior.
+
+**Code implementation delegated separately**: the two new scripts (`scripts/export-players-for-review.ts`, `scripts/import-players-review.ts`) and the inline CSV utility do not yet exist. This SPEC revision covers artifacts only — implementation is a separate, already-delegated run-phase task (manager-develop), not performed as part of this revision.
+
+Tier: M (unchanged). Route: Hybrid Trunk main-direct (unchanged). This is a scoped revision of the 0.5.0 requirement set already pending a fresh plan-auditor cycle (carried forward from the 0.3.0 major revision) — the fresh-audit-cycle requirement noted above carries forward, now against the 0.6.0 requirement set.
 
 ## §E.2 Run-phase Evidence
 

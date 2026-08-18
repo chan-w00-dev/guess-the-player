@@ -4,11 +4,11 @@
 
 Automated tests only, per `product.md` § 검증 방식: Vitest (`npm test`), TDD (test-first, RED-GREEN-REFACTOR). Coverage targets from `.moai/config/sections/quality.yaml`: 85% overall target, 80% minimum per commit. Unit tests cover `lib/game/`, `lib/korean-name-mapping/`, `lib/player-search/` first (pure logic, per `tech.md` § 테스트 방식 recommendation); integration tests cover the full guess flow (`tests/integration/guess-flow.test.ts`) and the API route boundary. External dependencies (the football data provider, Supabase) are exercised through mock/stub adapters in unit and integration tests — no test depends on a live external service.
 
-This is the 0.3.0 revision of `acceptance.md`, rewritten to cover the attribute-comparison guesser mechanic (`spec.md` HISTORY 0.3.0) in place of the retired progressive/sequential hint-reveal mechanic. No scenario below references hint-reveal behavior. Updated in the 0.4.0 scoped revision (`spec.md` HISTORY 0.4.0): squad number removed as a compared attribute (4 attributes now: nationality, club, position, age); no scenario below references squad number as a live requirement. Updated in the 0.5.0 scoped revision (`spec.md` HISTORY 0.5.0): squad number reinstated as a compared attribute (5 attributes again: nationality, club, position, age, squad number), now sourced via manual entry rather than sync from football-data.org; Scenarios 3, 20, 21, and 22 below cover squad-number comparison, the manual-maintenance/no-overwrite requirement, and the M7 player-pool filter.
+This is the 0.3.0 revision of `acceptance.md`, rewritten to cover the attribute-comparison guesser mechanic (`spec.md` HISTORY 0.3.0) in place of the retired progressive/sequential hint-reveal mechanic. No scenario below references hint-reveal behavior. Updated in the 0.4.0 scoped revision (`spec.md` HISTORY 0.4.0): squad number removed as a compared attribute (4 attributes now: nationality, club, position, age); no scenario below references squad number as a live requirement. Updated in the 0.5.0 scoped revision (`spec.md` HISTORY 0.5.0): squad number reinstated as a compared attribute (5 attributes again: nationality, club, position, age, squad number), now sourced via manual entry rather than sync from football-data.org; Scenarios 3, 20, 21, and 22 below cover squad-number comparison, the manual-maintenance/no-overwrite requirement, and the M7 player-pool filter. Updated in the 0.6.0 scoped revision (`spec.md` HISTORY 0.6.0): a combined CSV review-export/review-import capability added for Korean name + squad number (REQ-REVIEW-001..003, `spec.md` §B.8), additive to the existing seed/manual-entry mechanisms; Scenarios 23-25 below cover export column/pre-fill correctness, import upsert-on-filled-cell behavior, and import skip-on-blank-cell behavior.
 
 ## §B. Given-When-Then Scenarios
 
-Minimum 2 required; 22 provided covering every requirement module in `spec.md` §B, including the full 8-guess losing round, a mid-round winning guess, the duplicate-guess-consumes-an-attempt behavior, Korean-input autocomplete + guess acceptance, the categorical-vs-numeric-with-arrow comparison distinction, and (0.5.0) squad-number comparison, manual maintenance/no-overwrite, and the M7 player-pool filter.
+Minimum 2 required; 25 provided covering every requirement module in `spec.md` §B, including the full 8-guess losing round, a mid-round winning guess, the duplicate-guess-consumes-an-attempt behavior, Korean-input autocomplete + guess acceptance, the categorical-vs-numeric-with-arrow comparison distinction, (0.5.0) squad-number comparison, manual maintenance/no-overwrite, and the M7 player-pool filter, and (0.6.0) the combined CSV review-export/review-import workflow for Korean name + squad number.
 
 1. **New round selects a random player from the Premier League 2026/27 pool, excluding the immediately preceding one**
    Given a Premier League 2026/27 player pool with 3 or more players and a just-completed round whose target was Player X
@@ -120,6 +120,21 @@ Minimum 2 required; 22 provided covering every requirement module in `spec.md` �
     When a new round starts and the player selection service selects a target player
     Then the selected target is always drawn only from the subset of players having both a Korean name mapping and a registered squad number (REQ-SELECT-005)
 
+23. **Review-export produces a CSV with the expected columns and pre-filled known-attribute values (added 0.6.0)**
+    Given the current synced Premier League 2026/27 player pool, where some players have an existing Korean name mapping and/or squad number and others do not
+    When the review-export script runs
+    Then it produces a CSV file with exactly the columns `id, name, nationality, club, age, koreanName, squadNumber`, with `id/name/nationality/club/age` populated from the synced Supabase data for every row, and `koreanName`/`squadNumber` populated with the current value where one exists or left blank otherwise (REQ-REVIEW-001)
+
+24. **Review-import upserts a filled koreanName cell and updates a filled squadNumber cell, keyed by id (added 0.6.0)**
+    Given an edited CSV (produced by review-export) where one row has a non-blank `koreanName` cell and a non-blank numeric `squadNumber` cell
+    When the review-import script runs against that CSV
+    Then the Korean-name mapping for that row's `id` is upserted to the CSV's `koreanName` value and the `players.squad_number` column for that `id` is updated to the CSV's `squadNumber` value (REQ-REVIEW-002)
+
+25. **Review-import skips blank koreanName/squadNumber cells rather than overwriting with empty values (added 0.6.0)**
+    Given an edited CSV where one row's `koreanName` cell is blank and another row's `squadNumber` cell is blank, while both rows had a previously-stored value for that field
+    When the review-import script runs against that CSV
+    Then the previously-stored `koreanName`/`squadNumber` values for those rows are left unchanged — the import does not write an empty-string or null value over an existing value (REQ-REVIEW-003)
+
 ## §C. Edge Cases
 
 - Empty player pool at round start (REQ-SELECT-004) — no round starts; an empty-pool state is surfaced instead of a crash or a round with an undefined target.
@@ -171,15 +186,18 @@ Minimum 2 required; 22 provided covering every requirement module in `spec.md` �
 | AC-GAME-CORE-030 | REQ-SYNC-004 | Squad numbers are populated via a manual entry process keyed by player id, never via the periodic sync job | Unit test — manual entry script behavior, plus a static grep confirming `lib/player-data-sync/sync.ts` never calls it |
 | AC-GAME-CORE-031 | REQ-SYNC-005 | Sync job's upsert payload never includes `squad_number`; a manually-entered value survives a sync run unchanged | Integration test against a mock provider adapter + a test Supabase instance/mock — assert `squad_number` column untouched after sync |
 | AC-GAME-CORE-032 | REQ-SELECT-005 | Target-player selection pool restricted to players with both a Korean name mapping and a registered squad number | Unit test — `lib/game/player-selector.ts`, mock pool fixture with partially-registered players |
+| AC-GAME-CORE-033 | REQ-REVIEW-001 | Review-export produces a CSV with the expected columns and known-attribute values pre-filled | Unit/integration test — `scripts/export-players-for-review.ts`, mock Supabase fixture |
+| AC-GAME-CORE-034 | REQ-REVIEW-002 | Review-import upserts a filled koreanName cell (via existing korean-name-mapping upsert) and updates a filled squadNumber cell (via existing runSquadNumberUpdate), both keyed by id | Unit/integration test — `scripts/import-players-review.ts` |
+| AC-GAME-CORE-035 | REQ-REVIEW-003 | Blank koreanName/squadNumber cells in the imported CSV are skipped, not written as empty-string/null overwrites | Unit test — mock CSV fixture with blank cells against a pre-populated fixture value |
 
 ### §D.2 Severity Classification
 
-- **Must-pass (blocks Definition of Done):** AC-GAME-CORE-001 through 016, 018 through 027, and 029 through 032 (30 of 32 rows) — every core-loop, comparison-engine, guess-submission, search/autocomplete, Korean-mapping-resolution, replay, sync-sourcing-boundary, and (0.5.0) squad-number manual-maintenance/no-overwrite/pool-restriction behavior, plus the API-key-protection check.
+- **Must-pass (blocks Definition of Done):** AC-GAME-CORE-001 through 016, 018 through 027, and 029 through 035 (33 of 35 rows) — every core-loop, comparison-engine, guess-submission, search/autocomplete, Korean-mapping-resolution, replay, sync-sourcing-boundary, (0.5.0) squad-number manual-maintenance/no-overwrite/pool-restriction, and (0.6.0) combined CSV review-export/review-import behavior, plus the API-key-protection check.
 - **Should-pass (recorded, non-blocking for this SPEC's closure if deferred with justification):** AC-GAME-CORE-017 (the one-time seed bootstrap integration test may depend on a test Supabase instance being available in CI/local — if unavailable at run-phase, a manual verification note plus a follow-up ticket is an acceptable substitute, but the seed script itself must still exist and be unit-testable in isolation); AC-GAME-CORE-028 (the sync-job integration test carries the same test-Supabase-instance dependency as AC-GAME-CORE-017 — the same substitution path applies, but the sync job itself must still exist and be unit-testable against the mock `FootballDataProvider` adapter in isolation).
 
 ### §D.3 Traceability (REQ → AC → Test)
 
-Every REQ-* ID in `spec.md` §B has at least one AC row in §D.1 OR an indirect-verification entry in §D.4; every AC row names its verification method, and every indirect-verification entry names its verification path. No REQ in spec.md §B is left without either. REQ-NFR-002 (coverage), REQ-NFR-003 (Korean mapping independent of provider availability), and REQ-NFR-004 (live gameplay concurrency independent of the football data provider's rate limit) are verified indirectly — see §D.4. This is a two-tier verification model — §D.1 direct AC rows for requirements observable via a dedicated test, §D.4 indirect entries for requirements verified structurally or as a byproduct of other tests — not a contradiction between the two sections.
+Every REQ-* ID in `spec.md` §B has at least one AC row in §D.1 OR an indirect-verification entry in §D.4; every AC row names its verification method, and every indirect-verification entry names its verification path. No REQ in spec.md §B is left without either. REQ-NFR-002 (coverage), REQ-NFR-003 (Korean mapping independent of provider availability), and REQ-NFR-004 (live gameplay concurrency independent of the football data provider's rate limit) are verified indirectly — see §D.4. This is a two-tier verification model — §D.1 direct AC rows for requirements observable via a dedicated test, §D.4 indirect entries for requirements verified structurally or as a byproduct of other tests — not a contradiction between the two sections. REQ-REVIEW-001..003 (§B.8, added 0.6.0) are verified directly via AC-GAME-CORE-033 through 035.
 
 ### §D.4 Indirect Verification
 
