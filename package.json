@@ -12,7 +12,9 @@
     "test:coverage": "vitest run --coverage",
     "sync:players": "tsx --env-file-if-exists=.env.local scripts/sync-players.ts",
     "seed:korean-names": "tsx --env-file-if-exists=.env.local scripts/seed-korean-names.ts",
-    "update:squad-number": "tsx --env-file-if-exists=.env.local scripts/update-squad-numbers.ts"
+    "update:squad-number": "tsx --env-file-if-exists=.env.local scripts/update-squad-numbers.ts",
+    "export:players-review": "tsx --env-file-if-exists=.env.local scripts/export-players-for-review.ts",
+    "import:players-review": "tsx --env-file-if-exists=.env.local scripts/import-players-review.ts"
   },
   "dependencies": {
     "@supabase/supabase-js": "^2.112.3",

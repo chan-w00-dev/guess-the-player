@@ -218,6 +218,61 @@ comparison behavior beyond the squad-number widening above, M5 Korean
 mapping, M6 search, M7 selection, M8 guess submission) and are not
 re-verified by this entry._
 
+### M12 — Combined CSV Review Export/Import (status: complete)
+
+Implements REQ-REVIEW-001..003 (spec.md §B.8, added 0.6.0) — additive to,
+not a replacement for, the M5 Korean-name-mapping seed bootstrap and the
+0.5.0 id-keyed squad-number manual entry mechanism, both of which remain
+valid, unmodified, and untouched by this milestone.
+
+**New modules:**
+- **`lib/csv/`** (`parse.ts`, `write.ts`, `index.ts`) — a small, dependency-free
+  RFC4180-lite CSV parse/write utility (quoted-field handling for a comma, a
+  double-quote, or a newline inside a field). No new npm dependency.
+- **`lib/player-review/`** (`types.ts`, `export.ts`, `import.ts`,
+  `supabase-adapter.ts`, `index.ts`) — the review CSV column shape
+  (`id,name,nationality,club,age,koreanName,squadNumber`), the read-only
+  players↔korean_name_mappings join (`buildPlayerReviewRows`,
+  `runPlayerReviewExport`, anon-key only), and the CSV parse + blank-cell-skip
+  batch-building logic (`parsePlayerReviewCsv`, `buildReviewWriteBatches`).
+  This module never calls Supabase to write — see the scripts below.
+- **`scripts/export-players-for-review.ts`** + `npm run export:players-review`
+  — read-only CLI entry point, anon-key client only; never imports
+  `createSeedSupabaseClient`/`createSquadNumberSupabaseClient`.
+- **`scripts/import-players-review.ts`** + `npm run import:players-review` —
+  writes exclusively through the existing, already-tested
+  `runKoreanNameSeed` (`lib/korean-name-mapping/`) and `runSquadNumberUpdate`
+  (`lib/squad-number/`) — this file contains zero raw `.upsert()`/`.update()`
+  Supabase calls (verified by grep below). The blank-cell-skip rule
+  (REQ-REVIEW-003) is satisfied by construction in
+  `buildReviewWriteBatches`: a row with a blank `koreanName`/`squadNumber`
+  cell is simply never added to that column's write-batch array, so neither
+  reused function ever sees — and therefore can never overwrite — a stored
+  value with a blank.
+- `.gitignore` — added `data/player-review-export.csv` (generated artifact,
+  not committed seed data, unlike `data/korean-name-seed.json`).
+- `package.json` — added `export:players-review` / `import:players-review`
+  scripts, matching the `seed:korean-names`/`update:squad-number` pattern.
+
+**Self-verification (evidence):**
+
+| Check | Command | Result |
+|---|---|---|
+| Tests | `npx vitest run` | PASS — 27 files, 275 tests, 0 failed (up from 216) |
+| Coverage | `npx vitest run --coverage` | Repo-wide 99.69% stmts / 97.91% branch / 100% funcs / 99.68% lines; `lib/csv/` and `lib/player-review/` both 100% stmts/funcs/lines (94-97% branch) — exceeds the 85%/80% quality.yaml thresholds. The only sub-100%-stmts row (`lib/player-search/search.ts`, pre-existing, untouched by this milestone) is outside this milestone's scope. |
+| Type-check | `npx tsc --noEmit` | exit 0 |
+| Lint | `npx eslint .` | exit 0 (1 pre-existing unrelated warning on a generated `coverage/` artifact, same as the 0.5.0 pass) |
+| Build | `npm run build` | exit 0 |
+| Reuse-boundary grep (constraint 4, D-8) | `grep -n "\.upsert(\|\.update(" scripts/import-players-review.ts` | 0 matches — the script calls only `runKoreanNameSeed`/`runSquadNumberUpdate`, never a raw Supabase table write |
+
+### AC PASS/FAIL Matrix (M12 — this pass only)
+
+| AC | REQ | Status | Verification | Actual Output |
+|---|---|---|---|---|
+| AC-GAME-CORE-033 | REQ-REVIEW-001 | PASS | `npx vitest run tests/unit/player-review/export.test.ts` | `buildPlayerReviewRows` pre-fills id/name/nationality/club/age from the players row and koreanName from a matched mapping, blanks (never the literal `"null"`) when absent; `runPlayerReviewExport` mock-Supabase-fixture test joins players + mappings end-to-end — all PASS |
+| AC-GAME-CORE-034 | REQ-REVIEW-002 | PASS | `npx vitest run tests/unit/player-review/import-integration.test.ts` | Wires `buildReviewWriteBatches` output into the real `runKoreanNameSeed` (upserts keyed by original name) and the real `runSquadNumberUpdate` (updates keyed by numeric id) via fake Supabase clients mirroring `lib/korean-name-mapping/seed.test.ts`/`lib/squad-number/update.test.ts` — both reused functions receive exactly the expected calls — PASS |
+| AC-GAME-CORE-035 | REQ-REVIEW-003 | PASS | `npx vitest run tests/unit/player-review/import.test.ts` | A row with a blank `koreanName` cell (squadNumber filled) is excluded from `koreanMappings`; a row with a blank `squadNumber` cell (koreanName filled) is excluded from `squadNumberEntries`; both-blank and whitespace-only cells are excluded from both; a non-numeric squadNumber cell is skipped rather than producing a `NaN` entry — all PASS. `import-integration.test.ts` additionally confirms neither reused write function is ever called for a blank-cell row. |
+
 ## §E.3 Run-phase Audit-Ready Signal
 
 _<pending run-phase>_
