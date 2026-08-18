@@ -2,7 +2,7 @@
 
 ## §E.1 Plan-phase Audit-Ready Signal
 
-plan_status: audit-ready (fresh audit cycle required — see 0.6.0 entry below)
+plan_status: audit-ready (fresh audit cycle in progress — review-6.md scored FAIL 0.67 against the 0.6.0 requirement set; D1-D5 defect-fix pass applied 2026-08-18, see the review-6.md entry below — awaiting iteration 2 of the 0.6.0 fresh cycle)
 plan_complete_at: 2026-08-13
 plan_revised_at: 2026-08-18
 
@@ -30,6 +30,8 @@ Changes applied in this revision:
 
 Tier: M (unchanged). Route: Hybrid Trunk main-direct (no branch/worktree, unchanged). **Plan-auditor status reset: this SPEC requires a fresh audit cycle (starting at iteration 1 of a new cycle) against the 0.3.0 requirement set before proceeding to run-phase** — the iteration-3 PASS (0.89) audited a since-superseded requirement set and does not satisfy the Plan Audit Gate for 0.3.0.
 
+**Fresh-cycle audit result — `review-4.md` (2026-08-14):** iteration 1 of the 0.3.0 fresh cycle — **PASS, score 0.92**. This is the audit that satisfied the "fresh audit cycle required" note directly above: the 0.3.0 requirement set was independently reviewed and passed before the 0.4.0 revision below was authored. (This entry was missing from this file until the plan-audit `review-6.md` D5 defect-fix pass on 2026-08-18 — see that entry near the end of this section for the full correction record.)
+
 **0.4.0 scoped revision (2026-08-14) — squad number dropped + age computation corrected, informed by real live-implementation findings during M1-M4:**
 
 This is a scoped revision (not a full SPEC rewrite), driven by two real live-implementation findings surfaced during M1-M4 run-phase work:
@@ -39,7 +41,9 @@ This is a scoped revision (not a full SPEC rewrite), driven by two real live-imp
 
 **Code-removal/correction pass required, delegated separately**: M1-M4 code already exists under the pre-0.4.0 5-attribute / birthday-adjusted-age scope (`types/player.ts`, `types/comparison.ts`, `lib/game/comparison-engine.ts` where landed, `lib/football-api/`, `lib/player-data-sync/`, and the Supabase player-data table migration). This SPEC revision covers artifacts only — the corresponding code-removal/correction pass in the modules above is a separate, already-delegated run-phase task (manager-develop), not performed as part of this revision.
 
-Tier: M (unchanged). Route: Hybrid Trunk main-direct (unchanged). This is a scoped revision of the 0.3.0 requirement set already pending a fresh plan-auditor cycle — the fresh-audit-cycle requirement noted above carries forward, now against the 0.4.0 requirement set.
+Tier: M (unchanged). Route: Hybrid Trunk main-direct (unchanged). This is a scoped revision of the 0.3.0 requirement set, which `review-4.md` passed (0.92, see above) prior to this revision; because this revision materially changes the requirement set again (5 → 4 attributes), a new fresh plan-auditor cycle is required against the 0.4.0 requirement set before proceeding to run-phase.
+
+**Fresh-cycle audit result — `review-5.md` (2026-08-14):** iteration 1 of the 0.4.0 fresh cycle — **PASS, score 0.80**. The 0.4.0 requirement set was independently reviewed and passed before the 0.5.0 revision below was authored. (This entry was missing from this file until the plan-audit `review-6.md` D5 defect-fix pass on 2026-08-18 — see that entry near the end of this section for the full correction record.)
 
 **0.5.0 scoped revision (2026-08-14) — squad number reinstated, manually maintained:**
 
@@ -52,7 +56,7 @@ This is a scoped revision (not a full SPEC rewrite), reversing the 0.4.0 squad-n
 
 **Code re-addition pass required, delegated separately**: M1, M2, and M4 code already exists under the pre-0.5.0 4-attribute scope (`types/player.ts`, `types/comparison.ts`, `lib/game/comparison-engine.ts`, and `lib/player-data-sync/sync.ts`'s upsert payload), all implemented complete per the 0.4.0-era scope. This SPEC revision covers artifacts only — the corresponding code re-addition pass (restoring the git-history-reusable squad-number type/comparison logic, adding a new Supabase migration to re-add the `squad_number` column, modifying the M4 sync job's upsert to explicitly omit `squad_number`, and creating a new manual squad-number entry script keyed by player id) in the modules above is a separate, already-delegated run-phase task (manager-develop), not performed as part of this revision. M3 requires no code change — its "football-data.org does not supply squad-number data" statement remains true and unchanged, since the old provider fetch path is explicitly not revived.
 
-Tier: M (unchanged). Route: Hybrid Trunk main-direct (unchanged). This is a scoped revision of the 0.4.0 requirement set already pending a fresh plan-auditor cycle (carried forward from the 0.3.0 major revision) — the fresh-audit-cycle requirement noted above carries forward, now against the 0.5.0 requirement set.
+Tier: M (unchanged). Route: Hybrid Trunk main-direct (unchanged). This is a scoped revision of the 0.4.0 requirement set, which `review-5.md` passed (0.80, see above) prior to this revision; because this revision again materially changes the requirement set (4 → 5 attributes, reinstating squad number, plus new REQ-SYNC-004/005 and REQ-SELECT-005), a new fresh plan-auditor cycle is required against the 0.5.0 requirement set before proceeding to run-phase. **No audit was run against the 0.5.0-scoped requirement set** before the 0.6.0 revision below was authored.
 
 **0.6.0 scoped revision (2026-08-18) — combined CSV review workflow for Korean name + squad number:**
 
@@ -66,7 +70,11 @@ This is a scoped revision (not a full SPEC rewrite), additive to the existing RE
 
 **Code implementation delegated separately**: the two new scripts (`scripts/export-players-for-review.ts`, `scripts/import-players-review.ts`) and the inline CSV utility do not yet exist. This SPEC revision covers artifacts only — implementation is a separate, already-delegated run-phase task (manager-develop), not performed as part of this revision.
 
-Tier: M (unchanged). Route: Hybrid Trunk main-direct (unchanged). This is a scoped revision of the 0.5.0 requirement set already pending a fresh plan-auditor cycle (carried forward from the 0.3.0 major revision) — the fresh-audit-cycle requirement noted above carries forward, now against the 0.6.0 requirement set.
+Tier: M (unchanged). Route: Hybrid Trunk main-direct (unchanged). This is a scoped revision of the 0.5.0 requirement set, which was **never independently audited** before this 0.6.0 revision (see above); this revision adds the REQ-REVIEW-001..003 module (§B.8), and the resulting 0.6.0 requirement set is the subject of the fresh plan-auditor cycle required before proceeding to run-phase — see the `review-6.md` entry immediately below.
+
+**Fresh-cycle audit result — `review-6.md` (2026-08-18):** iteration 1 of the 0.6.0 fresh cycle — **FAIL, score 0.67** (Tier M threshold 0.80). All 7 Must-Pass criteria individually PASS or N/A; the FAIL is driven entirely by the aggregate harmonic-mean category score, primarily Completeness (0.50). Defects found: D1 (critical) — `spec-compact.md` was stale relative to `spec.md` (still stated 4 compared attributes, missing REQ-SELECT-005/REQ-SYNC-004/005/the entire REQ-REVIEW-001..003 module, and an out-of-date "Files to Modify" list); D2/D3 (minor) — REQ-COMPARE-004 and REQ-SELECT-003 carried GEARS pattern-label mismatches (labeled "Ubiquitous"/"Capability gate" despite event-driven/state-driven trigger bodies); D4 (major) — `acceptance.md` Scenario 18 cited only the long-retired REQ-HINT-004 with no live REQ or AC backing; D5 (major) — this section's own audit-history record (the paragraph you are reading) omitted that `review-4.md` and `review-5.md` had ever completed, implying no plan-audit cycle had passed since iteration-3 of the pre-0.3.0 mechanic even though both later PASS verdicts exist. D6 (minor, optional/non-blocking per the review-6.md report) — literal DB-column/CSV-header names embedded in REQ-SYNC-005/REQ-REVIEW-001..003 normative text — left unaddressed by design, no action required.
+
+**D1-D5 defect-fix pass (2026-08-18, this entry):** all five defects resolved in place, version remains 0.6.0 (a defect fix, not a new revision): `spec-compact.md` fully regenerated against the current 0.6.0 `spec.md` (5 attributes throughout, REQ-SELECT-005/REQ-SYNC-004/005/REQ-REVIEW-001..003 added, Scenarios 20-25 added, "Files to Modify" updated to include `lib/squad-number/`, `lib/csv/`, `lib/player-review/`, the two review-CSV scripts, `scripts/update-squad-numbers.ts`, and the `0004_add_squad_number_column.sql` migration); REQ-COMPARE-004 relabeled "(Event-driven)" and REQ-SELECT-003 relabeled "(State-driven)" with its trigger clause reworded from "Where" to "While" (`spec.md`); a new REQ-NFR-005 plus `acceptance.md` AC-GAME-CORE-036 added to close Scenario 18's traceability gap, and Scenario 18's Then-clause citation corrected from the retired REQ-HINT-004 to REQ-NFR-005; and this §E.1 section corrected to record `review-4.md`/`review-5.md`'s completion (the two entries above) plus accurate revision-entry language throughout. D6 is left unaddressed per the review-6.md report's own non-blocking classification. **The next plan-auditor iteration (iteration 2 of the 0.6.0 fresh cycle) re-scores this SPEC against these corrected artifacts.**
 
 ## §E.2 Run-phase Evidence
 

@@ -48,7 +48,7 @@ Seven requirement modules. Subjects are generalized per GEARS (not fixed to "the
 
 - **REQ-SELECT-001** (Ubiquitous): The player selection service shall select a target player at random from the Premier League 2026/27 season player pool at the start of every round.
 - **REQ-SELECT-002** (Event-driven): When a new round starts and the player pool contains more than one player, the player selection service shall exclude the immediately preceding round's target player from that round's random selection set.
-- **REQ-SELECT-003** (Capability gate): Where the player pool contains exactly one player, the player selection service shall select that player even when it matches the immediately preceding round's target player.
+- **REQ-SELECT-003** (State-driven): While the player pool contains exactly one player, the player selection service shall select that player even when it matches the immediately preceding round's target player.
 - **REQ-SELECT-004** (Event-detected / unwanted): When the player pool is empty, the system shall not start a new round and shall surface an empty-pool state to the user instead.
 - **REQ-SELECT-005** (Ubiquitous, added 0.5.0): The player selection service shall restrict the target-player selection pool at every round start to players having both a Korean name mapping (REQ-KOREAN-001) and a registered squad number (REQ-SYNC-004), excluding any player missing either from the random selection set defined by REQ-SELECT-001.
 
@@ -57,7 +57,7 @@ Seven requirement modules. Subjects are generalized per GEARS (not fixed to "the
 - **REQ-COMPARE-001** (Ubiquitous): The comparison engine shall compare a submitted guess player against the current round's target player across exactly five attributes: nationality, club, position, age, and squad number.
 - **REQ-COMPARE-002** (Event-driven): When a user submits a guess, the comparison engine shall evaluate all five attributes and return one comparison result row containing a per-attribute outcome.
 - **REQ-COMPARE-003** (Ubiquitous): For the three categorical attributes — nationality, club, and position — the comparison engine shall return exactly a correct-or-incorrect match indicator per attribute and shall not include any directional information for these attributes.
-- **REQ-COMPARE-004** (Ubiquitous): For the two numeric attributes — age and squad number — when the guessed player's value for that attribute does not match the target's value, the comparison engine shall additionally return a directional indicator showing whether the target's value is higher or lower than the guessed player's value.
+- **REQ-COMPARE-004** (Event-driven): For the two numeric attributes — age and squad number — when the guessed player's value for that attribute does not match the target's value, the comparison engine shall additionally return a directional indicator showing whether the target's value is higher or lower than the guessed player's value.
 - **REQ-COMPARE-005** (Ubiquitous): The comparison engine shall classify every player's position as exactly one of four values: FW, MF, DF, or GK.
 - **REQ-COMPARE-006** (Event-driven): When a user submits a guess for a player already guessed earlier in the same round, the comparison engine shall return the same comparison result as that player's original guess in the round.
 - **REQ-COMPARE-007** (Event-detected / unwanted): When the target or guessed player's synced attribute data is incomplete for one of the five comparison attributes, the comparison engine shall mark that attribute as unavailable in the comparison result and shall not fail the guess submission.
@@ -121,6 +121,7 @@ This module is additive to REQ-KOREAN-004 (§B.4, one-time bundled seed) and REQ
 - **REQ-NFR-002** (Ubiquitous): Automated tests shall verify every requirement module in §B, targeting the coverage thresholds configured in `.moai/config/sections/quality.yaml` (`test_coverage_target: 85`, `tdd_settings.min_coverage_per_commit: 80`).
 - **REQ-NFR-003** (Ubiquitous): The Korean name mapping service shall remain queryable independently of the availability of the external football data provider — a provider outage shall not prevent name resolution for already-known players.
 - **REQ-NFR-004** (Ubiquitous): Live gameplay concurrency (player selection, player search, guess submission and comparison) shall be bounded only by Supabase/Next.js capacity, not by the external football data provider's rate limit — per REQ-SYNC-001/003, no live gameplay request handler calls the provider directly, so the provider's 10 requests/minute free-tier limit only bounds the sync job's call frequency, not concurrent player count.
+- **REQ-NFR-005** (Event-detected / unwanted, added in the plan-audit review-6.md D4 defect-fix pass): When the Supabase player-data table is unavailable or returns an error during a live gameplay request (player selection or guess submission/comparison), the affected service shall surface a retryable error state to the user and shall not expose the target player's identity.
 
 ## §D. Out of Scope
 
