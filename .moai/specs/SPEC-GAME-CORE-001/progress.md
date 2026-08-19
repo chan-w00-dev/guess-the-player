@@ -812,7 +812,7 @@ named above.
 
 ```yaml
 sync_complete_at: 2026-08-19
-sync_commit_sha: pending-backfill-sync-close
+sync_commit_sha: 47e25c5
 sync_status: complete
 changelog_entry_position: "[Unreleased]-equivalent single dated 0.1.0 entry (first release for this repository)"
 frontmatter_status_transitions:
