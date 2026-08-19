@@ -802,4 +802,19 @@ m1_to_mN_commit_strategy: "per-milestone separate commits, each pushed to main d
 
 ## §E.4 Sync-phase Audit-Ready Signal
 
-_<pending sync-phase>_
+Sync-phase closed this SPEC: created `CHANGELOG.md` and `README.md` (both new
+files, first SPEC in this repository), transitioned `spec.md` frontmatter
+`status: in-progress -> completed` and `updated: 2026-08-18 -> 2026-08-19`,
+and recorded this closing signal — all in a single sync commit per the Route A
+Hybrid Trunk 1-person OSS 3-phase close. No SPEC body content
+(spec.md/plan.md/acceptance.md) was modified beyond the frontmatter fields
+named above.
+
+```yaml
+sync_complete_at: 2026-08-19
+sync_commit_sha: pending-backfill-sync-close
+sync_status: complete
+changelog_entry_position: "[Unreleased]-equivalent single dated 0.1.0 entry (first release for this repository)"
+frontmatter_status_transitions:
+  spec_md: "in-progress -> completed"
+```
