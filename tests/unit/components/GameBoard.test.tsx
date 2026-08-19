@@ -192,4 +192,98 @@ describe("GameBoard (SPEC-GAME-CORE-001 §F M10 orchestrator)", () => {
     // The board itself must still be rendered (no crash / blank screen).
     expect(screen.getByTestId("attempt-counter")).toBeInTheDocument();
   });
+
+  it("surfaces an inline error, does not crash, and ignores a guess selection when starting a round fails via a network error (startRound catch path + handleSelect guard short-circuit on a missing roundToken)", async () => {
+    const fetchMock = vi.mocked(fetch);
+    fetchMock.mockRejectedValueOnce(new Error("network down"));
+
+    render(<GameBoard />);
+
+    await waitFor(() => {
+      expect(screen.getByRole("alert")).toHaveTextContent(
+        "Could not start a new round. Please try again.",
+      );
+    });
+    // The board still renders its main layout (no crash) even though
+    // roundToken never resolved — GuessSearchInput is not disabled by
+    // status/isSubmitting alone, so a selection reaches handleSelect's
+    // `!roundToken` guard and must short-circuit without side effects.
+    expect(screen.getByTestId("attempt-counter")).toHaveTextContent("0 of 8 attempts used");
+
+    fireEvent.click(screen.getByTestId("mock-search-select"));
+
+    // handleSelect's guard returns immediately: no /api/guess call is made,
+    // and the inline error / attempt count are left unchanged.
+    await waitFor(() => {
+      expect(fetchMock).toHaveBeenCalledTimes(1);
+    });
+    expect(screen.getByRole("alert")).toHaveTextContent(
+      "Could not start a new round. Please try again.",
+    );
+    expect(screen.getByTestId("attempt-counter")).toHaveTextContent("0 of 8 attempts used");
+  });
+
+  it("surfaces an inline error when submitting a guess fails via a network error (handleSelect catch path)", async () => {
+    const fetchMock = vi.mocked(fetch);
+    fetchMock.mockResolvedValueOnce(jsonResponse({ roundToken: "tok-1", attemptsRemaining: 8 }));
+    render(<GameBoard />);
+    await waitFor(() => screen.getByTestId("attempt-counter"));
+
+    fetchMock.mockRejectedValueOnce(new Error("network down"));
+
+    fireEvent.click(screen.getByTestId("mock-search-select"));
+
+    await waitFor(() => {
+      expect(screen.getByRole("alert")).toHaveTextContent(
+        "Could not submit that guess. Please try again.",
+      );
+    });
+    // The round state is unaffected by the failed submission attempt.
+    expect(screen.getByTestId("attempt-counter")).toHaveTextContent("0 of 8 attempts used");
+  });
+
+  it("surfaces an inline error without crashing when starting a round returns a non-503 error response (resolved !response.ok path, no exception thrown)", async () => {
+    const fetchMock = vi.mocked(fetch);
+    fetchMock.mockResolvedValueOnce(jsonResponse({ error: "internal" }, 500));
+
+    render(<GameBoard />);
+
+    await waitFor(() => {
+      expect(screen.getByRole("alert")).toHaveTextContent(
+        "Could not start a new round. Please try again.",
+      );
+    });
+    expect(screen.getByTestId("attempt-counter")).toHaveTextContent("0 of 8 attempts used");
+  });
+
+  it("surfaces the invalid-round, invalid-player, and retryable-error inline messages for their respective guess-rejection statuses (describeGuessError switch coverage)", async () => {
+    const fetchMock = vi.mocked(fetch);
+    fetchMock.mockResolvedValueOnce(jsonResponse({ roundToken: "tok-1", attemptsRemaining: 8 }));
+    render(<GameBoard />);
+    await waitFor(() => screen.getByTestId("attempt-counter"));
+
+    fetchMock.mockResolvedValueOnce(jsonResponse({ status: "invalid-round" }, 400));
+    fireEvent.click(screen.getByTestId("mock-search-select"));
+    await waitFor(() => {
+      expect(screen.getByRole("alert")).toHaveTextContent(
+        "Your round has expired — try starting a new one.",
+      );
+    });
+
+    fetchMock.mockResolvedValueOnce(jsonResponse({ status: "invalid-player" }, 400));
+    fireEvent.click(screen.getByTestId("mock-search-select"));
+    await waitFor(() => {
+      expect(screen.getByRole("alert")).toHaveTextContent(
+        "That player could not be found. Please pick another candidate.",
+      );
+    });
+
+    fetchMock.mockResolvedValueOnce(jsonResponse({ status: "retryable-error" }, 503));
+    fireEvent.click(screen.getByTestId("mock-search-select"));
+    await waitFor(() => {
+      expect(screen.getByRole("alert")).toHaveTextContent(
+        "Something went wrong submitting that guess. Please try again.",
+      );
+    });
+  });
 });
