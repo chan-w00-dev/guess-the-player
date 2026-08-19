@@ -76,6 +76,8 @@ Tier: M (unchanged). Route: Hybrid Trunk main-direct (unchanged). This is a scop
 
 **D1-D5 defect-fix pass (2026-08-18, this entry):** all five defects resolved in place, version remains 0.6.0 (a defect fix, not a new revision): `spec-compact.md` fully regenerated against the current 0.6.0 `spec.md` (5 attributes throughout, REQ-SELECT-005/REQ-SYNC-004/005/REQ-REVIEW-001..003 added, Scenarios 20-25 added, "Files to Modify" updated to include `lib/squad-number/`, `lib/csv/`, `lib/player-review/`, the two review-CSV scripts, `scripts/update-squad-numbers.ts`, and the `0004_add_squad_number_column.sql` migration); REQ-COMPARE-004 relabeled "(Event-driven)" and REQ-SELECT-003 relabeled "(State-driven)" with its trigger clause reworded from "Where" to "While" (`spec.md`); a new REQ-NFR-005 plus `acceptance.md` AC-GAME-CORE-036 added to close Scenario 18's traceability gap, and Scenario 18's Then-clause citation corrected from the retired REQ-HINT-004 to REQ-NFR-005; and this §E.1 section corrected to record `review-4.md`/`review-5.md`'s completion (the two entries above) plus accurate revision-entry language throughout. D6 is left unaddressed per the review-6.md report's own non-blocking classification. **The next plan-auditor iteration (iteration 2 of the 0.6.0 fresh cycle) re-scores this SPEC against these corrected artifacts.**
 
+**0.7.0 in-place amendment (2026-08-19) — reopened via `completed → in-progress (amendment)`:** the SPEC was fully `completed` (sync commit `47e25c5`, 2026-08-19) before this amendment. The user requested a richer comparison-cell display (guessed player's actual value — flag/emblem/text/number+arrow — instead of a bare ✓/✗, background color unchanged); `manager-spec` authored the amendment (commit `9ba532b`): `amendment_of: SPEC-GAME-CORE-001`, version 0.6.0 → 0.7.0, new REQ-SEARCH-007 + REQ-COMPARE-008..012, new AC-GAME-CORE-037..043. **Fresh-cycle audit result — `review-8.md` (2026-08-19):** iteration 1 of the 0.7.0 amendment cycle — **PASS, score 0.86** (Tier M threshold 0.80). 4 non-blocking defects found (D1/D4 major, D2/D3 minor) — D1: REQ-COMPARE-008/009's own normative text doesn't state the `unavailable`-cell exception (only acceptance.md does); D2: AC-GAME-CORE-038 omits the same caveat AC-037 states; D3: the "no new API call" claim isn't directly covered by its AC's own verification method; D4: this file's §E.1/§E.4 were stale (this entry resolves D4). D1-D3 are compensated for directly in the M13 implementation delegation (the orchestrator explicitly instructed the unavailable-cell-first check and a dedicated no-new-API-call test) rather than looping back through another plan-audit iteration for wording-only spec/AC-text gaps.
+
 ## §E.2 Run-phase Evidence
 
 ### M1 — Domain Types & Data Model (status: complete)
@@ -802,13 +804,19 @@ m1_to_mN_commit_strategy: "per-milestone separate commits, each pushed to main d
 
 ## §E.4 Sync-phase Audit-Ready Signal
 
-Sync-phase closed this SPEC: created `CHANGELOG.md` and `README.md` (both new
-files, first SPEC in this repository), transitioned `spec.md` frontmatter
-`status: in-progress -> completed` and `updated: 2026-08-18 -> 2026-08-19`,
-and recorded this closing signal — all in a single sync commit per the Route A
-Hybrid Trunk 1-person OSS 3-phase close. No SPEC body content
-(spec.md/plan.md/acceptance.md) was modified beyond the frontmatter fields
-named above.
+Sync-phase closed this SPEC (2026-08-19 sync commit `47e25c5`): created
+`CHANGELOG.md` and `README.md` (both new files, first SPEC in this
+repository), transitioned `spec.md` frontmatter `status: in-progress ->
+completed` and `updated: 2026-08-18 -> 2026-08-19`, and recorded this closing
+signal — all in a single sync commit per the Route A Hybrid Trunk 1-person
+OSS 3-phase close. No SPEC body content (spec.md/plan.md/acceptance.md) was
+modified beyond the frontmatter fields named above.
+
+**Reopened by the 0.7.0 in-place amendment (2026-08-19, commit `9ba532b`)** —
+see the new §E.1 entry above. `status` is `in-progress` again pending the new
+M13 milestone's run-phase and a fresh sync-phase close once M13 lands; this
+§E.4 record describes the PRIOR (0.6.0) sync close and is retained for
+history, not the SPEC's current state.
 
 ```yaml
 sync_complete_at: 2026-08-19
