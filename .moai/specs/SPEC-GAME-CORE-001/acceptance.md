@@ -4,7 +4,7 @@
 
 Automated tests only, per `product.md` § 검증 방식: Vitest (`npm test`), TDD (test-first, RED-GREEN-REFACTOR). Coverage targets from `.moai/config/sections/quality.yaml`: 85% overall target, 80% minimum per commit. Unit tests cover `lib/game/`, `lib/korean-name-mapping/`, `lib/player-search/` first (pure logic, per `tech.md` § 테스트 방식 recommendation); integration tests cover the full guess flow (`tests/integration/guess-flow.test.ts`) and the API route boundary. External dependencies (the football data provider, Supabase) are exercised through mock/stub adapters in unit and integration tests — no test depends on a live external service.
 
-This is the 0.3.0 revision of `acceptance.md`, rewritten to cover the attribute-comparison guesser mechanic (`spec.md` HISTORY 0.3.0) in place of the retired progressive/sequential hint-reveal mechanic. No scenario below references hint-reveal behavior. Updated in the 0.4.0 scoped revision (`spec.md` HISTORY 0.4.0): squad number removed as a compared attribute (4 attributes now: nationality, club, position, age); no scenario below references squad number as a live requirement. Updated in the 0.5.0 scoped revision (`spec.md` HISTORY 0.5.0): squad number reinstated as a compared attribute (5 attributes again: nationality, club, position, age, squad number), now sourced via manual entry rather than sync from football-data.org; Scenarios 3, 20, 21, and 22 below cover squad-number comparison, the manual-maintenance/no-overwrite requirement, and the M7 player-pool filter. Updated in the 0.6.0 scoped revision (`spec.md` HISTORY 0.6.0): a combined CSV review-export/review-import capability added for Korean name + squad number (REQ-REVIEW-001..003, `spec.md` §B.8), additive to the existing seed/manual-entry mechanisms; Scenarios 23-25 below cover export column/pre-fill correctness, import upsert-on-filled-cell behavior, and import skip-on-blank-cell behavior. Updated in the plan-audit review-6.md D4 defect-fix pass (2026-08-18): Scenario 18's REQ citation, which had cited only the long-retired REQ-HINT-004, is corrected to the new REQ-NFR-005 (`spec.md` §C, added in the same pass); AC-GAME-CORE-036 is added below to close the traceability gap the review-6.md audit found (Scenario 18 previously had zero backing AC row).
+This is the 0.3.0 revision of `acceptance.md`, rewritten to cover the attribute-comparison guesser mechanic (`spec.md` HISTORY 0.3.0) in place of the retired progressive/sequential hint-reveal mechanic. No scenario below references hint-reveal behavior. Updated in the 0.4.0 scoped revision (`spec.md` HISTORY 0.4.0): squad number removed as a compared attribute (4 attributes now: nationality, club, position, age); no scenario below references squad number as a live requirement. Updated in the 0.5.0 scoped revision (`spec.md` HISTORY 0.5.0): squad number reinstated as a compared attribute (5 attributes again: nationality, club, position, age, squad number), now sourced via manual entry rather than sync from football-data.org; Scenarios 3, 20, 21, and 22 below cover squad-number comparison, the manual-maintenance/no-overwrite requirement, and the M7 player-pool filter. Updated in the 0.6.0 scoped revision (`spec.md` HISTORY 0.6.0): a combined CSV review-export/review-import capability added for Korean name + squad number (REQ-REVIEW-001..003, `spec.md` §B.8), additive to the existing seed/manual-entry mechanisms; Scenarios 23-25 below cover export column/pre-fill correctness, import upsert-on-filled-cell behavior, and import skip-on-blank-cell behavior. Updated in the plan-audit review-6.md D4 defect-fix pass (2026-08-18): Scenario 18's REQ citation, which had cited only the long-retired REQ-HINT-004, is corrected to the new REQ-NFR-005 (`spec.md` §C, added in the same pass); AC-GAME-CORE-036 is added below to close the traceability gap the review-6.md audit found (Scenario 18 previously had zero backing AC row). Updated in the 0.7.0 in-place amendment (`spec.md` HISTORY 0.7.0, `completed → in-progress (amendment)`): a comparison-cell DISPLAY layer is added on top of the unchanged §B.2 comparison LOGIC — REQ-SEARCH-007 (widened search-candidate shape) and REQ-COMPARE-008..012 (rich cell rendering: actual guessed value, nationality flags, club emblems, unmapped-value fallback); Scenarios 26-34 below cover the new display behavior plus a REQ-GUESS-005 no-new-target-exposure regression guard, backed by AC-GAME-CORE-037 through AC-GAME-CORE-043.
 
 ## §B. Given-When-Then Scenarios
 
@@ -135,6 +135,51 @@ Minimum 2 required; 25 provided covering every requirement module in `spec.md` �
     When the review-import script runs against that CSV
     Then the previously-stored `koreanName`/`squadNumber` values for those rows are left unchanged — the import does not write an empty-string or null value over an existing value (REQ-REVIEW-003)
 
+26. **Categorical comparison cells render the guessed player's actual value instead of a bare symbol (added 0.7.0)**
+    Given a submitted guess whose position differs from the target's position
+    When the comparison result is rendered
+    Then the position cell displays the guessed player's actual FW/MF/DF/GK value as text — not a ✓/✗ symbol — with the cell's red incorrect background unchanged (REQ-COMPARE-008, REQ-COMPARE-003)
+
+27. **Nationality and club cells render as a flag and an emblem image respectively (added 0.7.0)**
+    Given a submitted guess whose nationality and club both differ from the target's
+    When the comparison result is rendered
+    Then the nationality cell displays the guessed player's national flag and the club cell displays the guessed player's club emblem image, both cells keeping their red incorrect background (REQ-COMPARE-008, REQ-COMPARE-010, REQ-COMPARE-011)
+
+28. **Numeric cells render the guessed player's actual value plus the existing directional arrow (added 0.7.0)**
+    Given a submitted guess whose age differs from the target's age
+    When the comparison result is rendered
+    Then the age cell displays the guessed player's actual age number plus the existing ↑/↓ directional indicator, with the red incorrect background unchanged (REQ-COMPARE-009, REQ-COMPARE-004)
+
+29. **Squad number cell formats the guessed value as `#N` (added 0.7.0)**
+    Given a submitted guess whose squad number differs from the target's squad number
+    When the comparison result is rendered
+    Then the squad number cell displays the guessed player's actual squad number formatted as `#N`, plus the existing directional arrow (REQ-COMPARE-009)
+
+30. **Northern Ireland nationality falls back to the UK flag, never the England flag or a text code (added 0.7.0)**
+    Given a guessed player whose nationality is "Northern Ireland"
+    When the nationality cell is rendered
+    Then the cell displays the United Kingdom flag (🇬🇧) — not the England flag and not a text country code (REQ-COMPARE-010)
+
+31. **England, Scotland, and Wales render their own Unicode regional subdivision flags (added 0.7.0)**
+    Given three guessed players whose nationalities are England, Scotland, and Wales respectively
+    When each player's nationality cell is rendered
+    Then each cell displays that nation's own Unicode regional flag (GB-ENG / GB-SCT / GB-WLS) — not the generic United Kingdom flag (REQ-COMPARE-010)
+
+32. **Unmapped club or nationality falls back to the existing textual rendering (added 0.7.0)**
+    Given a guessed player whose club or nationality has no entry in the respective static display mapping
+    When that comparison cell is rendered
+    Then the cell falls back to the existing textual correct/incorrect rendering rather than failing the guess or the round (REQ-COMPARE-012)
+
+33. **`PlayerSearchCandidate` carries nationality/age/squadNumber with no additional API call (added 0.7.0)**
+    Given a user selects a candidate from the search/autocomplete results
+    When the selected candidate becomes the client-side guess-pending state
+    Then the candidate object already includes `nationality`, `age`, and `squadNumber` — sourced from the same search response that already returned the candidate, with no additional API call made (REQ-SEARCH-007)
+
+34. **No new target-player data is exposed by the widened search candidate shape (regression guard, added 0.7.0)**
+    Given the full searchable player pool, which incidentally includes the current round's (undisclosed) target player
+    When a user's search query happens to match the target player among the returned candidates
+    Then the returned candidate row exposes only the same fields — now including `nationality`/`age`/`squadNumber` — that ANY candidate in the pool exposes, with no additional target-specific field or "this is the target" marker, and the guess-submission response for a subsequent incorrect guess still contains no field identifying the target (REQ-GUESS-005 unchanged)
+
 ## §C. Edge Cases
 
 - Empty player pool at round start (REQ-SELECT-004) — no round starts; an empty-pool state is surfaced instead of a crash or a round with an undefined target.
@@ -147,6 +192,8 @@ Minimum 2 required; 25 provided covering every requirement module in `spec.md` �
 - Sync job has not yet run / the Supabase player-data table is empty at fresh deployment — falls back to the REQ-SELECT-004 empty-pool state (no round starts) until the first sync job run populates the table; this is consistent existing behavior, not a new failure mode.
 - Rapid repeated guess submissions for the same round (double-submit) — not a hard requirement in spec.md; recorded here as a forward-looking check (§D.6), not a must-pass AC for this SPEC.
 - 8-guess attempt cap bypass attempt (e.g. a client sending a 9th guess after the round already ended lost) — the server-side guess submission service (REQ-GUESS-007, `plan.md` §D constraint) must reject it; covered by AC-GAME-CORE-013's server-side enforcement expectation, not merely a client-side UI disablement.
+- **Guessed player's attribute is unavailable (0.7.0)** — when a comparison cell is `unavailable` (REQ-COMPARE-007, e.g. a missing age or squad number in the synced data), the cell renders the existing neutral "—" placeholder exactly as before this amendment; REQ-COMPARE-008/009's guessed-value rendering does not apply to an `unavailable` cell, since there is no reliable value to display — covered by AC-GAME-CORE-037/038's `unavailable`-checked-first rendering order, not a new AC.
+- **Guessed player's club or nationality is absent from the 0.7.0 static display mapping (Scenario 32)** — must degrade to the pre-0.7.0 textual correct/incorrect rendering for that cell, not a broken image, a missing glyph, or a failed guess.
 
 ## §D. AC Matrix
 
@@ -190,15 +237,22 @@ Minimum 2 required; 25 provided covering every requirement module in `spec.md` �
 | AC-GAME-CORE-034 | REQ-REVIEW-002 | Review-import upserts a filled koreanName cell (via existing korean-name-mapping upsert) and updates a filled squadNumber cell (via existing runSquadNumberUpdate), both keyed by id | Unit/integration test — `scripts/import-players-review.ts` |
 | AC-GAME-CORE-035 | REQ-REVIEW-003 | Blank koreanName/squadNumber cells in the imported CSV are skipped, not written as empty-string/null overwrites | Unit test — mock CSV fixture with blank cells against a pre-populated fixture value |
 | AC-GAME-CORE-036 | REQ-NFR-005 | Supabase player-data unavailability during a live gameplay request (player selection or guess submission/comparison) surfaces a retryable error state without exposing the target player's identity | Unit test — mock Supabase client returning an error/timeout during player selection or comparison; assert a retryable-error response shape with no target-identity field |
+| AC-GAME-CORE-037 | REQ-COMPARE-008 | Categorical comparison cells (nationality/club/position) render the guessed player's actual value — flag/emblem/text — instead of a bare ✓/✗ symbol, with the correct/incorrect background unchanged; `unavailable` cells are checked first and keep the neutral placeholder | Component test — `components/ComparisonTable.tsx`, asserting cell content per attribute |
+| AC-GAME-CORE-038 | REQ-COMPARE-009 | Numeric comparison cells (age/squadNumber) render the guessed player's actual value plus the existing directional arrow on mismatch; squadNumber is formatted as `#N` | Component test — `components/ComparisonTable.tsx` |
+| AC-GAME-CORE-039 | REQ-COMPARE-010 | Nationality flag rendering covers all 69 ground-truth nationality values; England/Scotland/Wales render their own Unicode regional subdivision flag; Northern Ireland falls back to the UK flag (🇬🇧), never the England flag or a text code | Unit test — `lib/game/nationality-flags.ts`, table-driven over the full 69-value set plus the 4 special cases |
+| AC-GAME-CORE-040 | REQ-COMPARE-011 | Club emblem rendering is sourced from the verified 20-entry static crest-URL table; rendering makes no new runtime API call | Unit test — `lib/game/club-crests.ts`, table-driven over all 20 clubs |
+| AC-GAME-CORE-041 | REQ-COMPARE-012 | A club or nationality absent from the respective static mapping falls back to the existing textual correct/incorrect rendering; the guess and the round do not fail | Unit test — mock fixture with an unmapped club/nationality string |
+| AC-GAME-CORE-042 | REQ-SEARCH-007 | `PlayerSearchCandidate` includes `nationality`, `age`, `squadNumber`, sourced from the same search query as the existing fields, with no additional API call | Unit test — `lib/player-search/search.ts`, asserting the widened candidate shape from both the Korean-match and original-language query paths |
+| AC-GAME-CORE-043 | REQ-GUESS-005 (regression) | The widened search-candidate shape exposes no new target-specific field or "this is the target" marker; the guess-submission response for an incorrect guess still contains no field identifying the target | Integration test — regression guard asserting the incorrect-guess response shape is unchanged by the REQ-SEARCH-007 widening |
 
 ### §D.2 Severity Classification
 
-- **Must-pass (blocks Definition of Done):** AC-GAME-CORE-001 through 016, 018 through 027, and 029 through 036 (34 of 36 rows) — every core-loop, comparison-engine, guess-submission, search/autocomplete, Korean-mapping-resolution, replay, sync-sourcing-boundary, (0.5.0) squad-number manual-maintenance/no-overwrite/pool-restriction, (0.6.0) combined CSV review-export/review-import behavior, and (review-6.md D4 fix) Supabase-unavailability error handling, plus the API-key-protection check.
+- **Must-pass (blocks Definition of Done):** AC-GAME-CORE-001 through 016, 018 through 027, 029 through 036, and 037 through 043 (41 of 43 rows) — every core-loop, comparison-engine, guess-submission, search/autocomplete, Korean-mapping-resolution, replay, sync-sourcing-boundary, (0.5.0) squad-number manual-maintenance/no-overwrite/pool-restriction, (0.6.0) combined CSV review-export/review-import behavior, (review-6.md D4 fix) Supabase-unavailability error handling, and (0.7.0 amendment) rich comparison-cell display + widened search-candidate shape + the REQ-GUESS-005 regression guard, plus the API-key-protection check.
 - **Should-pass (recorded, non-blocking for this SPEC's closure if deferred with justification):** AC-GAME-CORE-017 (the one-time seed bootstrap integration test may depend on a test Supabase instance being available in CI/local — if unavailable at run-phase, a manual verification note plus a follow-up ticket is an acceptable substitute, but the seed script itself must still exist and be unit-testable in isolation); AC-GAME-CORE-028 (the sync-job integration test carries the same test-Supabase-instance dependency as AC-GAME-CORE-017 — the same substitution path applies, but the sync job itself must still exist and be unit-testable against the mock `FootballDataProvider` adapter in isolation).
 
 ### §D.3 Traceability (REQ → AC → Test)
 
-Every REQ-* ID in `spec.md` §B/§C has at least one AC row in §D.1 OR an indirect-verification entry in §D.4; every AC row names its verification method, and every indirect-verification entry names its verification path. No REQ in spec.md §B/§C is left without either. REQ-NFR-002 (coverage), REQ-NFR-003 (Korean mapping independent of provider availability), and REQ-NFR-004 (live gameplay concurrency independent of the football data provider's rate limit) are verified indirectly — see §D.4. This is a two-tier verification model — §D.1 direct AC rows for requirements observable via a dedicated test, §D.4 indirect entries for requirements verified structurally or as a byproduct of other tests — not a contradiction between the two sections. REQ-REVIEW-001..003 (§B.8, added 0.6.0) are verified directly via AC-GAME-CORE-033 through 035. REQ-NFR-005 (Supabase player-data unavailability handling, added in the review-6.md D4 defect-fix pass) is verified directly via AC-GAME-CORE-036 — this closes the traceability gap the review-6.md plan-audit found in Scenario 18, which previously cited only the retired REQ-HINT-004 with no backing REQ or AC.
+Every REQ-* ID in `spec.md` §B/§C has at least one AC row in §D.1 OR an indirect-verification entry in §D.4; every AC row names its verification method, and every indirect-verification entry names its verification path. No REQ in spec.md §B/§C is left without either. REQ-NFR-002 (coverage), REQ-NFR-003 (Korean mapping independent of provider availability), and REQ-NFR-004 (live gameplay concurrency independent of the football data provider's rate limit) are verified indirectly — see §D.4. This is a two-tier verification model — §D.1 direct AC rows for requirements observable via a dedicated test, §D.4 indirect entries for requirements verified structurally or as a byproduct of other tests — not a contradiction between the two sections. REQ-REVIEW-001..003 (§B.8, added 0.6.0) are verified directly via AC-GAME-CORE-033 through 035. REQ-NFR-005 (Supabase player-data unavailability handling, added in the review-6.md D4 defect-fix pass) is verified directly via AC-GAME-CORE-036 — this closes the traceability gap the review-6.md plan-audit found in Scenario 18, which previously cited only the retired REQ-HINT-004 with no backing REQ or AC. REQ-SEARCH-007 and REQ-COMPARE-008..012 (added in the 0.7.0 in-place amendment) are verified directly via AC-GAME-CORE-037 through 043; REQ-COMPARE-001..007 (the comparison LOGIC these display requirements layer on top of) remain traced via their pre-existing AC rows, unchanged by this amendment.
 
 ### §D.4 Indirect Verification
 
@@ -223,6 +277,7 @@ All of the following must hold before this SPEC's run-phase is considered comple
 - The `plan.md` §E residual-hint-terminology grep (`grep -rin "hint" lib/ app/ types/`) returns zero matches, confirming the 0.3.0 mechanic replacement left no stale naming in implemented code.
 - The position-taxonomy keyword-classification rule (`plan.md` §B) is implemented per REQ-COMPARE-005, with its keyword list validated/expanded against real football-data.org response data at M3 (`plan.md` §F) before this closure gate is considered met.
 - The `plan.md` §E squad-number-sync-omission grep (`grep -n "squadNumber\|squad_number" lib/player-data-sync/sync.ts`) confirms the sync job's upsert payload never writes `squad_number`, confirming REQ-SYNC-005 (0.5.0).
+- The `plan.md` §E 0.7.0 self-verification batch — `git diff package.json package-lock.json` (no new dependency), the `lib/game/club-crests.ts` 20-entry count grep, and the `lib/player-search/` target-reference grep — all pass, confirming REQ-COMPARE-010/011's no-new-dependency constraint and REQ-SEARCH-007's target-boundary constraint (0.7.0 amendment).
 
 ### §D.6 Forward-Looking Checks
 

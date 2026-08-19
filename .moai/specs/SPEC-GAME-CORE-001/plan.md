@@ -8,6 +8,8 @@ Git strategy: Hybrid Trunk, 1-person OSS. This SPEC follows **Route A — Hybrid
 
 No prior SPEC exists in `.moai/specs/`; this SPEC introduces the ID namespace `GAME-CORE`.
 
+**0.7.0 in-place amendment note**: this plan.md is amended in step with `spec.md` 0.7.0 (`amendment_of: SPEC-GAME-CORE-001`, `completed → in-progress (amendment)` transition). M1-M12 below are historical run-phase record and are UNCHANGED by this amendment except where a milestone note explicitly says otherwise; the amendment's only new milestone is M13 (§F). Tier (M) and Route (Hybrid Trunk main-direct) are unaffected.
+
 **0.3.0 major revision note**: this plan.md is rewritten in step with `spec.md` 0.3.0. The SPEC had already passed plan-auditor iteration-3 (`.moai/reports/plan-audit/SPEC-GAME-CORE-001-review-3.md`, verdict PASS, score 0.89) under the previous progressive-hint-reveal mechanic. This revision replaces that mechanic entirely per a user-provided concrete reference (`https://playfootball.games/who-are-ya/premier-league/`) — a legitimate, user-confirmed scope clarification, not an audit failure or a regression. The Tier (M) and Route (Hybrid Trunk main-direct) judgments below are unaffected by the mechanic change and carry forward unchanged. This SPEC requires a fresh plan-auditor review cycle (starting again at iteration 1 of a new cycle) before proceeding to run-phase, since the requirement set has materially changed since the last PASS verdict.
 
 Tier judgment: **Tier M** (Medium). Rationale: the bundled scope (7 requirement modules, ~11 review milestones) exceeds a trivial single-file change, but the domain logic itself (selection, comparison engine, search/autocomplete, guess-submission, Korean mapping, player-data sync) is bounded and does not touch constitutional/frozen zones. The 3-file artifact set (spec.md + plan.md + acceptance.md) applies; per explicit user request this SPEC additionally ships `spec-compact.md` (the standard plan-phase auto-generated compact artifact) and `progress.md` (the standard §E skeleton). No separate `design.md` / `research.md` — this SPEC's technical-approach notes and open decisions are folded inline into this plan.md instead.
@@ -66,6 +68,71 @@ The user manages player display/comparison data with a spreadsheet mental model:
 
 **Reuses existing write paths, does not duplicate them:** the import script (`scripts/import-players-review.ts`) MUST call the already-implemented, already-tested upsert logic in `lib/korean-name-mapping/` (the same upsert path REQ-KOREAN-004's seed script uses) for the `koreanName` column, and the already-implemented `runSquadNumberUpdate` from `lib/squad-number/update.ts` for the `squadNumber` column — never a raw, duplicated Supabase write. This avoids re-deriving the REQ-SYNC-005 sync-non-overwrite guarantee and the existing tested upsert/update behavior in a second code path (see §G Anti-Patterns).
 
+### Resolved — Rich Comparison-Cell Display: Flags, Crests, Actual Values (0.7.0 amendment)
+
+Per direct user request, post-0.6.0: the comparison table currently shows only a ✓/✗ symbol per attribute cell on an incorrect guess. The user wants each cell to instead show the GUESSED player's actual value for that attribute, with the existing green/red correct/incorrect background unchanged — closing the same "which value differed?" gap the reference site's own comparison UI already closes. All decisions below were already confirmed directly with the user (via `AskUserQuestion`) before this plan.md revision — none are open for this SPEC.
+
+**Data-shape gap (the reason this needs a plan change, not just a component rewrite):** `PlayerSearchCandidate` (`lib/player-search/types.ts`) currently carries only `{id, originalName, koreanName, club, position}` — M6 never selected `nationality`, `age`, `squadNumber` into this shape, because REQ-SEARCH originally only needed enough fields for autocomplete display. `ComparisonTable.tsx` already receives the selected `PlayerSearchCandidate` per row (`ComparisonTableEntry.candidate`, see the file's current `entry.candidate.koreanName` read), so widening this one shape — not adding a new API call — closes the gap. Confirmed 0 new npm dependencies and 0 new API round-trips: the candidate is already client-side state the moment the user picks a guess (REQ-SEARCH-004).
+
+**Club emblem source — verified, HTTP-200-confirmed URL table (not guessed).** The following table was fetched LIVE from the football-data.org API against the actual 20 clubs present in the synced `players` table (cross-verified below), and is the SSOT for REQ-COMPARE-011's static mapping — implementers MUST use this table verbatim, not re-derive crest URLs:
+
+| Club (as stored in `players.club`) | Crest URL |
+|---|---|
+| Arsenal FC | `https://crests.football-data.org/57.png` |
+| Aston Villa FC | `https://crests.football-data.org/58.png` |
+| Chelsea FC | `https://crests.football-data.org/61.png` |
+| Everton FC | `https://crests.football-data.org/62.png` |
+| Fulham FC | `https://crests.football-data.org/63.png` |
+| Liverpool FC | `https://crests.football-data.org/64.png` |
+| Manchester City FC | `https://crests.football-data.org/65.png` |
+| Manchester United FC | `https://crests.football-data.org/66.png` |
+| Newcastle United FC | `https://crests.football-data.org/67.png` |
+| Sunderland AFC | `https://crests.football-data.org/71.png` |
+| Tottenham Hotspur FC | `https://crests.football-data.org/73.png` |
+| Hull City AFC | `https://crests.football-data.org/322.png` |
+| Leeds United FC | `https://crests.football-data.org/341.png` |
+| Ipswich Town FC | `https://crests.football-data.org/349.png` |
+| Nottingham Forest FC | `https://crests.football-data.org/351.png` |
+| Crystal Palace FC | `https://crests.football-data.org/354.png` |
+| Brighton & Hove Albion FC | `https://crests.football-data.org/397.png` |
+| Brentford FC | `https://crests.football-data.org/402.png` |
+| AFC Bournemouth | `https://crests.football-data.org/bournemouth.png` |
+| Coventry City FC | `https://crests.football-data.org/1076.png` |
+
+**Cross-verified against real synced data (not assumed):** a local run of `npm run export:players-review` (REQ-REVIEW-001, gitignored generated artifact `data/player-review-export.csv`, 621 rows) was parsed to extract every distinct `club` value actually present in the live Supabase `players` table — the result is exactly these same 20 club names, with no additional club and no name mismatch against the table above. Implementers building `lib/game/club-crests.ts` (REQ-COMPARE-011) may key the mapping directly on `players.club` string equality against this table's left column.
+
+**Nationality flag rendering — Unicode emoji, no new dependency (REQ-COMPARE-010).** Flags are rendered as Unicode emoji flag sequences computed from a nationality-name → ISO-3166 (or, for the UK's four nations, ISO-3166-2 ISO-3166-2:GB subdivision) code mapping — no new npm dependency, no image assets. The same `npm run export:players-review` parse above extracted the **real, complete distinct `nationality` set from the live pool: exactly 69 values.** This is the ground-truth set implementers MUST cover — do not invent a nationality string not in this list, and do not assume any nationality outside it will appear:
+
+```
+Albania, Algeria, Argentina, Australia, Austria, Belgium, Bosnia-Herzegovina,
+Brazil, Bulgaria, Burkina Faso, Cameroon, Canada, Chile, Colombia, Congo DR,
+Croatia, Czech Republic, Denmark, Ecuador, Egypt, England, France, Gambia,
+Georgia, Germany, Ghana, Greece, Guinea-Bissau, Haiti, Hungary, Iceland,
+Indonesia, Iraq, Ireland, Israel, Italy, Ivory Coast, Jamaica, Japan,
+Luxembourg, Mali, Morocco, Mozambique, Netherlands, New Zealand, Nigeria,
+Northern Ireland, Norway, Paraguay, Poland, Portugal, Scotland, Senegal,
+Serbia, Sierra Leone, Slovakia, Slovenia, South Korea, Spain, Suriname,
+Sweden, Switzerland, Trinidad & Tobago, Turkey, USA, Ukraine, Uruguay,
+Uzbekistan, Wales
+```
+
+Special-case handling within this 69-value set (REQ-COMPARE-010):
+
+1. **England, Scotland, Wales** — use the special Unicode regional flag tag-sequences (🏴 with the `GB-ENG`/`GB-SCT`/`GB-WLS` subdivision tag sequence), NOT the generic UK flag (🇬🇧) and NOT England's flag substituted for the others.
+2. **Northern Ireland** — recorded, user-confirmed exception: Northern Ireland has **no official Unicode subdivision flag** (unlike England/Scotland/Wales), so it falls back to the United Kingdom flag (🇬🇧). This was an explicit user decision, not an implementer default — implementers MUST NOT substitute the England flag or a text country code for this case, and MUST NOT treat the absence of a Northern Ireland subdivision flag as a bug to work around with a non-standard glyph.
+3. **Naming-to-ISO-code normalization** — several of the 69 strings need a normalization step before an ISO-3166 lookup succeeds (implementer task, not a further plan-level decision): `USA` → `US`, `South Korea` → `KR`, `Ivory Coast` → `CI`, `Congo DR` → `CD`, `Bosnia-Herzegovina` → `BA`, `Trinidad & Tobago` → `TT`, `Czech Republic` → `CZ`. The remaining ~62 values map via their standard English country name.
+4. **Fallback (REQ-COMPARE-012)** — a nationality string with no resolvable flag mapping (should not occur given the closed 69-value ground-truth set above, but is a defensive requirement) falls back to the existing textual correct/incorrect rendering for that cell, never a broken image/glyph and never a failed guess.
+
+**`PlayerSearchCandidate` widening (REQ-SEARCH-007).** `lib/player-search/types.ts`'s `PlayerSearchCandidate` interface gains three fields — `nationality: string | null`, `age: number | null`, `squadNumber: number | null` — mirroring the existing nullability of these fields on `Player` (`types/player.ts`, REQ-COMPARE-007 incomplete-data handling). `lib/player-search/search.ts`'s `toCandidate()` helper and its `PlayerSearchRow`/`select("id,name,club,position")` query MUST be widened to also select and map `nationality, age, squad_number` — both the Korean-match query path and the original-language query path in `searchPlayers()` build candidates through the same `toCandidate()` helper, so one change covers both paths (no duplicated widening).
+
+**Files affected:**
+- `lib/player-search/types.ts` — widen `PlayerSearchRow` + `PlayerSearchCandidate` (REQ-SEARCH-007)
+- `lib/player-search/search.ts` — widen the `select(...)` column lists + `toCandidate()` mapping (REQ-SEARCH-007)
+- `lib/game/club-crests.ts` (NEW) — the 20-entry static club → crest-URL table above (REQ-COMPARE-011)
+- `lib/game/nationality-flags.ts` (NEW) — the nationality → Unicode-flag mapping, covering all 69 ground-truth values + the England/Scotland/Wales/Northern-Ireland special cases (REQ-COMPARE-010)
+- `components/ComparisonTable.tsx` — the main rewrite: `cellContent()`/`cellClassName()` (or their replacement) render the guessed player's actual value per REQ-COMPARE-008/009, using the two new lookup modules above; the existing `cellClassName()` correct/incorrect green/red logic is REUSED verbatim, not reimplemented
+- Existing test files covering `lib/player-search/` and `components/ComparisonTable.tsx` — extended, not replaced
+
 ### Resolved — Player Pool Scope Narrowed to Premier League, 2026/27 Season
 
 The player pool is narrowed from the previous multi-league framing ("EPL, La Liga, etc.") to the **Premier League, 2026/27 season exclusively** — the upcoming season, chosen explicitly over the currently-live 2025/26 season because the product is being built ahead of that season's start. This affects REQ-SELECT-001 (selection scope) and REQ-SYNC-002 (sync target). Other leagues and other seasons are recorded as Out of Scope (spec.md §D) and deferred to a future SPEC, not silently dropped.
@@ -122,6 +189,10 @@ Because no source code exists yet, run-phase M1 begins from an empty tree. Pre-f
 - No authentication, session, or score-persistence mechanism is introduced — Out of Scope per spec.md §D.
 - No photo/picture-based guessing mode is introduced — Out of Scope per spec.md §D.
 - Route A (Hybrid Trunk main-direct): all commits land directly on `main`; no feature branch, no PR for this SPEC.
+- **0.7.0 amendment — no new npm dependency** (REQ-COMPARE-010/011): flag rendering uses Unicode emoji flag sequences (computed from the nationality→ISO-code mapping); club emblems use the verified static crest-URL table via a plain `<img>` — no flag/emoji npm package, no icon-font, no image asset bundled into the repo.
+- **0.7.0 amendment — nationality-flags.ts MUST cover exactly the 69-value ground-truth set** (`plan.md` §B "Resolved — Rich Comparison-Cell Display") — do not invent a nationality string outside this list, and do not silently drop one of the 69.
+- **0.7.0 amendment — Northern Ireland fallback is fixed, not implementer discretion** (REQ-COMPARE-010): Northern Ireland renders the UK flag (🇬🇧), never the England flag and never a text code — this is a recorded user decision, not a placeholder pending a "real" subdivision flag (none officially exists in Unicode).
+- **0.7.0 amendment — REQ-SEARCH-007's widening MUST NOT touch the guess-submission response shape or REQ-GUESS-005's no-leak invariant** — `PlayerSearchCandidate` is a search-result/already-selected-guess shape, never the round's target-player representation; the target-player identity-leak boundary (`lib/game/guess-service.ts`) is untouched by this amendment.
 
 ## §E. Self-Verification
 
@@ -135,6 +206,9 @@ Commands to run at run-phase completion (read-only, batchable):
 - `grep -rln "lib/football-api" lib/game/ lib/player-search/ app/api/player/ app/api/guess/` restricted to the live gameplay modules and API routes — confirm no live gameplay handler (including the new player search module) imports the `lib/football-api/` client directly; only the M4 sync job may import it (REQ-SYNC-001).
 - `grep -rin "hint" lib/ app/ types/ --include="*.ts" --include="*.tsx"` — confirm no residual naming from the retired progressive/sequential hint-reveal mechanic survives in the implemented code (a migration-hygiene check specific to this 0.3.0 revision; expected zero matches once M1-M11 are complete).
 - `grep -n "squadNumber\|squad_number" lib/player-data-sync/sync.ts` — confirm the sync job's upsert payload construction never references `squadNumber`/`squad_number` as a field it writes (REQ-SYNC-005, 0.5.0 revision); expected zero matches, or matches only inside a comment explicitly documenting the intentional omission.
+- `git diff package.json package-lock.json` (0.7.0 amendment) — confirm no new npm dependency was added for flag/crest rendering (REQ-COMPARE-010/011 constraint); expected empty diff on the `dependencies` block.
+- `grep -c "football-data.org/" lib/game/club-crests.ts` (0.7.0 amendment) — confirm the club-crest static table has exactly 20 entries, matching the verified table in `plan.md` §B.
+- `grep -rn "target" lib/player-search/types.ts lib/player-search/search.ts` (0.7.0 amendment) — confirm the REQ-SEARCH-007 widening introduces no reference to the round's target player anywhere in the search module (REQ-GUESS-005 boundary check); expected zero matches.
 
 ## §F. Milestones
 
@@ -152,6 +226,7 @@ Ordered by decision-reversibility — foundational type/interface/data-model and
 10. **M10 — UI Components** (Priority: Low-Medium). `GameBoard.tsx`, `GuessSearchInput.tsx` (search/autocomplete input accepting Korean + original-language queries, replacing free-text input), `ComparisonTable.tsx` (renders the 4-attribute comparison row per guess — categorical correct/incorrect cells and numeric cells with a directional arrow on mismatch), `AttemptCounter.tsx` (renders "N of 8" attempts used), `ResultModal.tsx` (win/loss reveal with the Korean-mapped name) — all Tailwind, consuming the M9 API routes. Mechanical once the domain contracts are fixed.
 11. **M11 — Test Suite Completion & Coverage Validation** (Priority: Low). Fill any remaining unit/integration test gaps (`tests/unit/`, `tests/integration/guess-flow.test.ts`), run the full §E self-verification batch (including the hint-terminology-residual grep), confirm coverage thresholds. Lowest review risk — verification, not a design decision.
 12. **M12 — Combined CSV Review Export/Import** (Priority: Low, added 0.6.0). `scripts/export-players-for-review.ts` and `scripts/import-players-review.ts` implementing REQ-REVIEW-001..003 (spec.md §B.8): export reads the Supabase `players` table LEFT JOINed with `korean_name_mappings` and writes a CSV (`id, name, nationality, club, age, koreanName, squadNumber`); import reads an edited CSV and, per row, upserts a non-blank `koreanName` via the existing `lib/korean-name-mapping/` upsert logic and applies a non-blank `squadNumber` via the existing `runSquadNumberUpdate` (`lib/squad-number/update.ts`), skipping blank cells rather than writing empty-string overwrites. A small RFC4180-lite CSV parse/write utility (quoted-field handling, since player/club/nationality names could contain a comma) is implemented inline — no new npm dependency. Lowest review risk: this milestone reuses M5's and the 0.5.0 pass's already-tested write paths verbatim rather than introducing new write logic; the only new code is the CSV shape and the two thin CLI scripts.
+13. **M13 — Rich Comparison-Cell Display** (Priority: Medium, added 0.7.0 amendment). Implements REQ-SEARCH-007 + REQ-COMPARE-008..012 (spec.md §B.5/§B.9, this amendment's §B "Resolved — Rich Comparison-Cell Display" above): widen `PlayerSearchCandidate` (`lib/player-search/types.ts`, `lib/player-search/search.ts`) to carry `nationality`/`age`/`squadNumber`; add `lib/game/club-crests.ts` (the 20-entry verified crest table) and `lib/game/nationality-flags.ts` (the 69-entry flag mapping, England/Scotland/Wales special flags, Northern-Ireland-falls-back-to-UK-flag exception); rewrite `components/ComparisonTable.tsx`'s cell-content rendering to show the guessed player's actual value per attribute while reusing the existing `cellClassName()` green/red correct/incorrect logic verbatim. Ranked above M12 in review priority (despite landing after it numerically) because the `PlayerSearchCandidate` shape widening is a data-model change with UX-facing consequences — the highest-change-likelihood decision in this milestone — while M12's CSV shape was already settled tooling; numeric position (13, appended after M12) preserves stable milestone numbering across SPEC revisions rather than renumbering M1-M12.
 
 Note: milestone ORDER above reflects review/decision-reversibility priority, not literal implementation sequencing — TDD's RED-GREEN-REFACTOR cycle still applies test-first within each milestone regardless of its position in this list.
 
@@ -172,6 +247,11 @@ Note: milestone ORDER above reflects review/decision-reversibility priority, not
 - Do NOT let the M4 sync job overwrite manually-entered squad numbers (REQ-SYNC-004/005, 0.5.0) — the upsert payload MUST omit `squad_number` unconditionally, regardless of whether the provider response happens to include a matching key.
 - Do NOT revive the old `lib/football-api/football-data-org-provider.ts` squad-number fetch path (0.5.0) — it was always `null` on the free tier (confirmed 0.4.0) and remains non-functional; squad numbers are sourced exclusively via the manual entry process (REQ-SYNC-004), never via the provider.
 - Do NOT re-implement raw Supabase writes for the CSV review-import path (0.6.0) — `scripts/import-players-review.ts` MUST call the existing `lib/korean-name-mapping/` upsert function and the existing `runSquadNumberUpdate` (`lib/squad-number/update.ts`) rather than duplicating write logic, to avoid re-deriving the REQ-SYNC-005 sync-non-overwrite guarantee and the already-tested upsert/update behavior in a second code path.
+- Do NOT add a new npm dependency (flag/emoji library, icon font, image asset) for the 0.7.0 rich comparison-cell display (REQ-COMPARE-010/011, §D) — Unicode emoji flags and the static crest-URL table are sufficient and were the explicit user decision.
+- Do NOT invent a nationality string outside the verified 69-value ground-truth set (`plan.md` §B "Resolved — Rich Comparison-Cell Display") when building `lib/game/nationality-flags.ts` — the set was extracted from the real synced pool, not assumed.
+- Do NOT substitute the England flag, a generic UK flag guess, or a text country code for Northern Ireland's nationality cell — the UK flag (🇬🇧) fallback is a fixed, recorded user decision (REQ-COMPARE-010), not implementer discretion.
+- Do NOT let REQ-SEARCH-007's `PlayerSearchCandidate` widening leak into or alter the guess-submission response shape or REQ-GUESS-005's no-target-identity-leak invariant — the widening is scoped to the search/candidate surface only.
+- Do NOT reimplement the correct/incorrect green/red cell background logic when rewriting `ComparisonTable.tsx` for REQ-COMPARE-008/009 — reuse the existing `cellClassName()` logic verbatim; only the cell CONTENT function changes.
 
 ## §H. Cross-References
 
@@ -182,3 +262,5 @@ Note: milestone ORDER above reflects review/decision-reversibility priority, not
 - `.moai/config/sections/quality.yaml` — TDD mode + coverage thresholds
 - `.moai/config/sections/git-strategy.yaml` — `manual` mode confirming Route A applicability
 - `.moai/reports/plan-audit/SPEC-GAME-CORE-001-review-1.md`, `-review-2.md`, `-review-3.md` — plan-audit history under the pre-0.3.0 mechanic (see `progress.md` for the 0.3.0 audit-status reset)
+- `data/player-review-export.csv` (0.7.0 amendment) — gitignored, locally-generated artifact from `npm run export:players-review` (REQ-REVIEW-001); the ground-truth source for the 69-nationality / 20-club sets in this plan's §B "Resolved — Rich Comparison-Cell Display"
+- `.claude/rules/moai/development/spec-frontmatter-schema.md` § Status Transition Ownership Matrix — the `completed → in-progress (amendment)` transition this 0.7.0 revision performs
