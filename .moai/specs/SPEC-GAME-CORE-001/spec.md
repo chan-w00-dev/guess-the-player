@@ -2,7 +2,7 @@
 id: SPEC-GAME-CORE-001
 title: "Guess-the-Player Game Core Loop with Korean Player-Name Mapping"
 version: "0.7.0"
-status: in-progress
+status: completed
 created: 2026-08-13
 updated: 2026-08-19
 author: chan-w00-dev

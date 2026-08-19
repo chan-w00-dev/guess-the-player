@@ -917,6 +917,29 @@ frontmatter_status_transitions:
   spec_md: "in-progress -> completed"
 ```
 
+**Second sync close — 0.7.0 amendment (2026-08-19):** closes the SPEC a
+second time after the `completed → in-progress (amendment)` reopen above.
+Appended a new dated `## [0.2.0] - 2026-08-19` entry to `CHANGELOG.md`
+(above the existing `[0.1.0]` entry, most-recent-first) documenting the
+rich comparison-cell display (REQ-SEARCH-007, REQ-COMPARE-008..012) and the
+7 new AC rows (AC-GAME-CORE-037..043); updated `README.md`'s game
+description to describe the actual-value cell rendering (flag/emblem/
+text/number+arrow) in place of the stale correct/incorrect-match-only
+wording; bumped `package.json` version `0.1.0 -> 0.2.0` to match the new
+CHANGELOG entry; transitioned `spec.md` frontmatter `status: in-progress ->
+completed` (`updated:` already `2026-08-19`, unchanged). No SPEC body
+content (spec.md/plan.md/acceptance.md) was modified beyond that one
+frontmatter field.
+
+```yaml
+sync_complete_at: 2026-08-19
+sync_commit_sha: pending-backfill-0.7.0-sync
+sync_status: complete
+changelog_entry_position: "new dated 0.2.0 entry, above the existing 0.1.0 entry (most-recent-first)"
+frontmatter_status_transitions:
+  spec_md: "in-progress -> completed (second close, 0.7.0 amendment)"
+```
+
 ## §F Phase 4 Mode Selection — M13
 
 Input parameters: tier=M, scope=1 new milestone (2 new static data files,

@@ -10,10 +10,12 @@ Each round, a target player is selected at random from the Premier League
 2026/27 season pool. You search for and select a candidate player (no
 free-text guessing), and each guess is compared against the target across
 five attributes: **nationality, club, position, age, and squad number**.
-Nationality/club/position show a correct/incorrect match; age/squad number
-additionally show a higher/lower arrow when they don't match. You have up to
-**8 guesses** per round — a correct guess wins immediately, and an 8th miss
-ends the round and reveals the target.
+Each cell shows the guessed player's actual value — a national flag for
+nationality, the club's emblem for club, FW/MF/DF/GK text for position, and
+the actual number (plus a higher/lower arrow on mismatch) for age/squad
+number — with a green or red background indicating a correct or incorrect
+match. You have up to **8 guesses** per round — a correct guess wins
+immediately, and an 8th miss ends the round and reveals the target.
 
 No login, no daily limit — start a new round any time.
 

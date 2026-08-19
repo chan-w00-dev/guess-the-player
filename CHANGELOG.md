@@ -5,6 +5,37 @@ All notable changes to this project are documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.2.0] - 2026-08-19
+
+### Added
+
+- **Rich comparison-cell display** (SPEC-GAME-CORE-001, 0.7.0 in-place
+  amendment): each comparison-table cell now renders the guessed player's
+  actual per-attribute value instead of a bare ✓/✗ symbol, while the
+  existing green/red correct/incorrect background coloring is unchanged.
+  Nationality renders as a national flag (a static 69-nationality table,
+  including the England/Scotland/Wales Unicode subdivision flags and a
+  Northern-Ireland-falls-back-to-the-UK-flag exception), club renders as
+  the club's emblem image (a static 20-club Premier League 2026/27
+  crest-URL table, no new runtime API call), position renders its
+  FW/MF/DF/GK text, and age/squad number render the guessed player's
+  actual numeric value formatted `#N` plus the existing ↑/↓ directional
+  arrow on mismatch. A club or nationality absent from its static mapping
+  falls back to the pre-amendment textual rendering without failing the
+  guess or the round; a cell already marked `unavailable` (missing synced
+  data) keeps its neutral placeholder and is never given a flag/crest/value.
+- **Widened search-candidate shape**: `PlayerSearchCandidate` now also
+  carries `nationality`, `age`, and `squadNumber`, sourced from the same
+  Supabase query that already populated the existing candidate fields — no
+  additional API call. This only widens which columns of the already-public
+  search/autocomplete candidate row are selected; it exposes no new data
+  about a round's target player, and the incorrect-guess response shape
+  (REQ-GUESS-005) is unchanged.
+- 117 new tests (Vitest), covering all 7 new acceptance criteria
+  (AC-GAME-CORE-037 through AC-GAME-CORE-043) in
+  `.moai/specs/SPEC-GAME-CORE-001/acceptance.md` — full suite now 502/502
+  passing, at 99.18%+ repository-wide statement coverage.
+
 ## [0.1.0] - 2026-08-19
 
 ### Added
@@ -62,4 +93,5 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   `.moai/specs/SPEC-GAME-CORE-001/acceptance.md`, at 99%+ repository-wide
   statement/branch/function/line coverage.
 
+[0.2.0]: https://github.com/chan-w00-dev/guess-the-player/releases/tag/v0.2.0
 [0.1.0]: https://github.com/chan-w00-dev/guess-the-player/releases/tag/v0.1.0
