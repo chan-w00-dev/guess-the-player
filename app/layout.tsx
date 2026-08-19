@@ -13,7 +13,7 @@ const geistMono = Geist_Mono({
 });
 
 export const metadata: Metadata = {
-  title: "Guess the Player",
+  title: "Who Are Ya?(한글)",
   description:
     "A Wordle/Poeltl-style Premier League attribute-comparison guesser with Korean player-name search.",
 };
