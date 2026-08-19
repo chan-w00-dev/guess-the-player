@@ -763,15 +763,26 @@ and `npx eslint .` are both clean (the one ESLint warning is a
 pre-existing, unrelated warning on a gitignored generated coverage
 artifact). No Out-of-Scope item (spec.md §D) appears in the diff.
 
-**Manual smoke test status (Definition of Done §D.7, NOT fully closed by
-this entry):** the orchestrator independently verified a WIN scenario
-end-to-end in a real browser against real Supabase data (Erling Haaland,
-id 38101) after M10 landed. The LOSS scenario (8 consecutive incorrect
-guesses) has NOT yet been manually verified — this remains pending and is
-owned by the orchestrator, to be performed separately after this
-milestone's commit lands. §D.7's manual-smoke-test line is therefore only
-partially satisfied as of this entry; do not treat it as fully closed
-until the loss-scenario verification is recorded.
+**Manual smoke test status (Definition of Done §D.7 — now fully closed):**
+the orchestrator independently verified both outcomes end-to-end in a real
+browser against real Supabase data:
+- **WIN**: verified after M10 landed — searched and selected Erling
+  Haaland (id 38101, the sole REQ-SELECT-005-eligible player at the time),
+  immediate win on the first guess, reveal showed `홀란드 / Erling Haaland`.
+- **LOSS**: verified after this M11 commit — repeatedly searched and
+  selected Bukayo Saka (a different, non-target player) 8 times in a row
+  against the same Haaland-only pool. Each submission correctly recorded a
+  new attempt and an identical comparison row (a live demonstration of
+  REQ-GUESS-006, duplicate-guess-consumes-an-attempt, as a side effect of
+  reusing one guess to reach 8 attempts). The `squadNumber` cell correctly
+  rendered the neutral "unavailable" placeholder throughout (Saka has no
+  squad number registered), never a false correct/incorrect color. On the
+  8th incorrect guess the round ended lost and the modal correctly
+  revealed `홀란드 / Erling Haaland` — matching the actual target, with no
+  identity leaked in any of the 8 prior rows. "Play again" correctly reset
+  the board (0 of 8, empty history) after both the win and the loss run.
+
+§D.7's manual-smoke-test line is fully satisfied as of this entry.
 
 ```yaml
 run_complete_at: 2026-08-19
