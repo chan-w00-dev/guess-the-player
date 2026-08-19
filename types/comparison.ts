@@ -107,8 +107,20 @@ export function createInitialRoundState(target: Player): RoundState {
   };
 }
 
-/** The target player's identity as revealed on a round's win or loss. */
+/**
+ * The target player's identity as revealed on a round's win or loss.
+ *
+ * `id` was added in M10 (SPEC-GAME-CORE-001 §D0): REQ-REPLAY-003's
+ * duplicate-avoidance rule is applied by the player-selection service via an
+ * `excludePlayerId` parameter, but the client has no other way to learn the
+ * just-ended round's target id — the M8 guess-submission flow never exposes
+ * it while the round is active (REQ-GUESS-005). Carrying it here lets
+ * `GameBoard.tsx` pass `excludeTargetId` to `GET /api/player/random` when the
+ * user clicks "play again", closing the gap without leaking anything beyond
+ * what is already revealed at round end.
+ */
 export interface RevealedIdentity {
+  id: string;
   originalName: string;
   koreanName: string;
 }

@@ -148,6 +148,7 @@ export async function submitGuess(options: SubmitGuessOptions): Promise<SubmitGu
   }
 
   const reveal: RevealedIdentity = {
+    id: round.target.id,
     originalName: round.target.name,
     koreanName: identity.koreanName,
   };

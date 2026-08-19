@@ -489,6 +489,32 @@ random-player route) that benefit from sequential, single-agent reasoning
 rather than parallel fan-out, per Anthropic's coding-task parallelism
 caveat.
 
+## §F Phase 4 Mode Selection — M10
+
+Input parameters: tier=M, scope=5 new components + `app/page.tsx` wiring +
+new test-tooling devDependencies (~7-8 files), domain count=1 (single
+Next.js/React codebase, no cross-domain touch), file language mix=100%
+TSX/TS, concurrency benefit=LOW (coding-heavy UI wiring, per Anthropic's
+coding-task parallelism caveat).
+
+Mode evaluation:
+| Mode | Selected? | Rationale |
+|---|---|---|
+| 1 trivial | No | Non-trivial: 5 new components + state wiring |
+| 2 background | No | Write-capable agent; orchestrator verifies (incl. browser smoke test) before next milestone |
+| 3 agent-team | No | RETIRED |
+| 4 parallel | No | Coding-heavy, single cohesive UI layer, not multi-domain research |
+| 5 sub-agent | **Selected** | Default fallback; coding-heavy UI wiring consuming the M9 API contracts, single sequential `manager-develop` spawn |
+| 6 workflow | No | Not mechanical/high-volume; ~7-8 files, semantic UI/state decisions, not a uniform mechanical transform |
+
+Decision: sub-agent
+
+Justification: M10 wires 5 new React components to the already-fixed M9 API
+contracts — coding-heavy, single-cohesive-surface work, per Anthropic's
+coding-task parallelism caveat. Orchestrator follows with a manual browser
+smoke test (CLAUDE.md UI-verification requirement) rather than trusting
+unit tests alone.
+
 ## §E.3 Run-phase Audit-Ready Signal
 
 _<pending run-phase>_

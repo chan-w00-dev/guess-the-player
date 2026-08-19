@@ -154,14 +154,18 @@ describe("POST /api/guess — successful submission (leak check)", () => {
         comparison: { attributes: [] },
         attemptCount: 1,
         status: "won",
-        reveal: { originalName: TARGET.name, koreanName: "홀란드" },
+        reveal: { id: TARGET.id, originalName: TARGET.name, koreanName: "홀란드" },
       },
     });
 
     const response = await POST(postRequest({ roundToken, playerId: TARGET.id }));
     const body = await response.json();
 
-    expect(body.result.reveal).toEqual({ originalName: TARGET.name, koreanName: "홀란드" });
+    expect(body.result.reveal).toEqual({
+      id: TARGET.id,
+      originalName: TARGET.name,
+      koreanName: "홀란드",
+    });
   });
 });
 

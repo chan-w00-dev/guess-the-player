@@ -88,6 +88,7 @@ describe("submitGuess — exact match wins immediately (REQ-GUESS-002, AC-GAME-C
       expect(outcome.result.status).toBe("won");
       expect(outcome.result.attemptCount).toBe(1);
       expect(outcome.result.reveal).toEqual({
+        id: TARGET.id,
         originalName: TARGET.name,
         koreanName: `KR-${TARGET.name}`,
       });
@@ -163,6 +164,7 @@ describe("submitGuess — 8th incorrect guess ends the round lost and reveals id
       expect(outcome.result.status).toBe("lost");
       expect(outcome.result.attemptCount).toBe(MAX_ATTEMPTS);
       expect(outcome.result.reveal).toEqual({
+        id: TARGET.id,
         originalName: TARGET.name,
         koreanName: `KR-${TARGET.name}`,
       });

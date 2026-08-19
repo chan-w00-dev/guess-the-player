@@ -139,9 +139,10 @@ describe("GuessResult + KoreanMapping shapes", () => {
       comparison: { attributes: [] },
       attemptCount: 3,
       status: "won",
-      reveal: { originalName: "Son Heung-min", koreanName: "손흥민" },
+      reveal: { id: "player-son", originalName: "Son Heung-min", koreanName: "손흥민" },
     };
     expect(result.reveal?.koreanName).toBe("손흥민");
+    expect(result.reveal?.id).toBe("player-son");
   });
 
   it("KoreanMapping shape maps an original-language name to a Korean display name", () => {
