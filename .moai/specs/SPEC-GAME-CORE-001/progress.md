@@ -749,6 +749,65 @@ risk — verification, not a design decision"). Orchestrator pre-ran the
 plan.md §E batch as a baseline (all 8 checks PASS except one coverage gap
 in `GameBoard.tsx`, 84.28% stmts) so the delegation is precisely scoped.
 
+### M13 — Rich Comparison-Cell Display (status: complete)
+
+Implements REQ-SEARCH-007 (widened `PlayerSearchCandidate`) and
+REQ-COMPARE-008..012 (rich comparison-cell display layer, `spec.md` §B.9,
+0.7.0 amendment). `components/ComparisonTable.tsx`'s cell rendering was
+rewritten to show the guessed player's actual per-attribute value (flag /
+emblem / FW-MF-DF-GK text / `#N`+arrow) in place of the prior bare ✓/✗
+symbol, with the existing green/red correct/incorrect background coloring
+(REQ-COMPARE-003) and the `unavailable`-checked-first ordering both
+preserved unchanged. Two new static lookup modules were added:
+`lib/game/club-crests.ts` (20-entry verified crest-URL table) and
+`lib/game/nationality-flags.ts` (69-entry nationality→ISO table plus the
+England/Scotland/Wales Unicode tag-sequence flags and the Northern-Ireland-
+falls-back-to-plain-UK-flag exception, both computed programmatically from
+the documented Unicode algorithms rather than hand-typed literals).
+`lib/player-search/types.ts`/`search.ts` were widened to carry
+`nationality`/`age`/`squadNumber` on `PlayerSearchCandidate`, sourced from
+the SAME `players`-table query that already fetched `id/name/club/position`
+— no second/dedicated query was added (verified directly, see AC-042 below).
+
+**review-8.md D1-D3 compensation (plan-audit iteration 1, PASS 0.86):** the
+delegation explicitly instructed, and this implementation applies, the
+`unavailable`-checked-first cell-rendering order (D1/D2 — the check runs
+BEFORE any attribute-specific branch, so an unavailable attribute never
+attempts to render a flag/crest/value) and a dedicated no-new-API-call test
+for the club emblem (D3 — `ComparisonTable.test.tsx`'s
+"renders the crest purely from the static club-crests lookup" test stubs
+`globalThis.fetch` and asserts it is never called during render).
+
+| AC | REQ | Status | Verification Command | Actual Output |
+|----|-----|--------|----------------------|----------------|
+| AC-GAME-CORE-037 | REQ-COMPARE-008 | PASS | `npx vitest run tests/unit/components/ComparisonTable.test.tsx` | 22 tests PASS — categorical cells (nationality/club/position) render the guessed player's actual value; `unavailable` checked FIRST (never a flag/crest/value); correct/incorrect background unchanged (green vs red, same flag/emblem content in both) |
+| AC-GAME-CORE-038 | REQ-COMPARE-009 | PASS | same file | Numeric cells (age/squadNumber) render the guessed player's actual value plus the existing directional arrow on mismatch; squadNumber formatted `#N`; a `null` squadNumber (distinct from `unavailable`) renders the neutral placeholder, never the literal `"#null"` |
+| AC-GAME-CORE-039 | REQ-COMPARE-010 | PASS | `npx vitest run tests/unit/nationality-flags.test.ts` | 79 tests PASS — all 69 ground-truth nationalities resolve to a non-null flag; England/Scotland/Wales produce 3 mutually-distinct Unicode tag-sequence flags, each also distinct from the plain regional-indicator-derived UK flag; Northern Ireland resolves to exactly that programmatically-derived plain-GB flag (asserted by equality, not a hardcoded literal), and is asserted distinct from the England flag |
+| AC-GAME-CORE-040 | REQ-COMPARE-011 | PASS | `npx vitest run tests/unit/club-crests.test.ts` | 24 tests PASS — all 20 verified Premier League 2026/27 clubs resolve to their exact crest URL; club-emblem rendering makes no new runtime API call (dedicated `fetch`-stub test in `ComparisonTable.test.tsx`, 0 calls observed) |
+| AC-GAME-CORE-041 | REQ-COMPARE-012 | PASS | all 3 files above | An unmapped club/nationality string (and `null` input) falls back to the pre-M13 textual rendering / returns `null` from the lookup — never throws, never fails the guess or the round |
+| AC-GAME-CORE-042 | REQ-SEARCH-007 | PASS | `npx vitest run tests/unit/player-search/search.test.ts` | 14 tests PASS, including 2 new dedicated D3 tests spying on the fake players-table `select()` call count: the original-language-only match path makes exactly 1 `players`-table call (unchanged from pre-M13), the Korean-match path makes exactly 2 (unchanged dual-path count) — both widened-field candidates are populated from those SAME calls, confirming no new/dedicated query was added |
+| AC-GAME-CORE-043 | REQ-GUESS-005 (regression) | PASS | `npx vitest run tests/unit/guess-service.test.ts tests/unit/api/guess.test.ts` | Pre-existing regression guard, untouched by this milestone (no `lib/game/comparison-engine.ts`/`guess-service.ts`/`app/api/**` file was modified) — the incorrect-guess response shape still carries no target-identity field |
+
+**Constraint Deviation notes:**
+
+- `<img>` for the club emblem triggers a non-blocking `@next/next/no-img-element`
+  ESLint warning (0 errors) recommending `next/image`; not switched to
+  `next/image` because the crest source is a fixed external CDN
+  (`crests.football-data.org`, not `next.config.ts`-registered as an
+  allowed image domain) and this is a small (20×20px) list-cell icon where
+  Next.js's automatic optimization pipeline provides negligible benefit —
+  judged not worth the `next.config.ts` domain-allowlist change for this
+  scope. Flagged for review, not silently ignored.
+- No other deviations. Scope stayed within `lib/game/club-crests.ts` (new),
+  `lib/game/nationality-flags.ts` (new), `lib/player-search/types.ts`,
+  `lib/player-search/search.ts`, `components/ComparisonTable.tsx`, and their
+  test files, plus 3 pre-existing fixture files that needed the 3 new
+  `PlayerSearchCandidate` fields added to stay type-correct
+  (`tests/unit/api/player-search.test.ts`,
+  `tests/unit/components/GameBoard.test.tsx`,
+  `tests/unit/components/GuessSearchInput.test.tsx`) — no production logic
+  in those 3 files' subjects was touched.
+
 ## §E.3 Run-phase Audit-Ready Signal
 
 **Closing summary (M11, run-phase complete):** All 34 must-pass AC rows in
@@ -802,6 +861,37 @@ total_run_phase_files: 122
 m1_to_mN_commit_strategy: "per-milestone separate commits, each pushed to main directly (Hybrid Trunk 1-person OSS, Route A) — M1 through this M11 commit"
 ```
 
+**Reopened by the 0.7.0 in-place amendment (2026-08-19) — M13 run-phase closing summary:**
+M13 is the amendment's sole new milestone (`plan.md` §A/§F); with it complete,
+all 7 new must-pass AC rows (AC-GAME-CORE-037 through 043, `acceptance.md`
+§D.1) are PASS — see the `### M13` section above. `npx vitest run` is green
+at 502/502 (up from the pre-amendment 385/385 baseline); `npx tsc --noEmit`
+and `npm run build` both exit 0; `npx eslint .` exits 0 (one pre-existing,
+non-blocking `@next/next/no-img-element` warning, see the M13 Constraint
+Deviation note above). Statement coverage repo-wide is 99.18%
+(both new files, `lib/game/club-crests.ts` and
+`lib/game/nationality-flags.ts`, are at 100% statements per the raw v8 JSON
+coverage report — the text reporter's summary table omits fully-covered
+files). REQ-COMPARE-001..007 (the comparison LOGIC) and REQ-GUESS-005 (the
+no-target-identity-leak invariant) are both unchanged and unaffected, per
+`spec.md` §D "Out of Scope — Target-Identity Data Exposure".
+
+```yaml
+run_complete_at: 2026-08-19
+run_commit_sha: pending-backfill-M13
+run_status: complete
+ac_pass_count: 7
+ac_fail_count: 0
+preserve_list_post_run_count: 0
+l44_pre_commit_fetch: "git fetch origin main; git rev-list --count --left-right origin/main...HEAD -> 0 0 (synced, no divergence)"
+l44_post_push_fetch: "pending-backfill-M13"
+new_warnings_or_lints_introduced: 0
+cross_platform_build:
+  note: "Next.js/TypeScript project — no GOOS/GOARCH cross-compilation axis; npm run build exit 0 on the current (darwin) host, no OS-specific build tags in this codebase"
+total_run_phase_files: 8
+m1_to_mN_commit_strategy: "single milestone (M13), one commit pushed to main directly (Hybrid Trunk 1-person OSS, Route A)"
+```
+
 ## §E.4 Sync-phase Audit-Ready Signal
 
 Sync-phase closed this SPEC (2026-08-19 sync commit `47e25c5`): created
@@ -826,3 +916,28 @@ changelog_entry_position: "[Unreleased]-equivalent single dated 0.1.0 entry (fir
 frontmatter_status_transitions:
   spec_md: "in-progress -> completed"
 ```
+
+## §F Phase 4 Mode Selection — M13
+
+Input parameters: tier=M, scope=1 new milestone (2 new static data files,
+1 widened type + its producer, 1 component rewrite, ~6-8 files total),
+domain count=1, file language mix=TS/TSX, concurrency benefit=LOW
+(coding-heavy display-layer wiring, per Anthropic's coding-task
+parallelism caveat).
+
+Mode evaluation:
+| Mode | Selected? | Rationale |
+|---|---|---|
+| 1 trivial | No | New static data modules + component rewrite, not a 1-liner |
+| 2 background | No | Write-capable agent; orchestrator verifies (incl. browser check) after |
+| 3 agent-team | No | RETIRED |
+| 4 parallel | No | Single cohesive display-layer feature, not multi-domain research |
+| 5 sub-agent | **Selected** | Default fallback; coding-heavy single-surface feature |
+| 6 workflow | No | Not mechanical/high-volume bulk transform |
+
+Decision: sub-agent
+
+Justification: M13 widens one type, adds two small static lookup tables
+(pre-verified data, not requiring further research), and rewrites one
+component to consume them — a single cohesive coding task, per Anthropic's
+coding-task parallelism caveat.

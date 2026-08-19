@@ -1,7 +1,8 @@
 "use client";
 
 /**
- * Guess history / comparison table — SPEC-GAME-CORE-001 §F M10.
+ * Guess history / comparison table — SPEC-GAME-CORE-001 §F M10, rich-cell
+ * display added M13 (0.7.0 amendment).
  *
  * Renders one row per submitted guess, one column per comparison attribute
  * (nationality, club, position, age, squadNumber — REQ-COMPARE-001/002).
@@ -15,18 +16,33 @@
  * numeric guess and an `unavailable` numeric attribute also omit `direction`
  * (see the D2/E6 self-verification note in the completion report).
  * `unavailable` cells (REQ-COMPARE-007) always render a neutral placeholder,
- * checked BEFORE the correct/incorrect branch so an unavailable attribute can
- * never render a false correct/incorrect indicator.
+ * checked FIRST — before any attribute-specific rendering branch — so an
+ * unavailable attribute can never render a false correct/incorrect indicator
+ * or attempt to render a flag/crest/value it does not reliably have
+ * (REQ-COMPARE-008/009, D1/D2 plan-audit finding).
+ *
+ * M13 (REQ-COMPARE-008..012): each cell renders the GUESSED player's actual
+ * value for that attribute — a national flag for nationality, a club emblem
+ * image for club, the FW/MF/DF/GK text for position, the actual number for
+ * age/squadNumber plus the existing directional arrow — instead of a bare
+ * ✓/✗ symbol. The green/red correct/incorrect background coloring
+ * (REQ-COMPARE-003) is unchanged. A club or nationality absent from the
+ * static display mapping falls back to the pre-M13 textual rendering
+ * (REQ-COMPARE-012) rather than failing the guess or the round.
  */
 
+import type { ReactNode } from "react";
 import {
   COMPARISON_ATTRIBUTES,
   isNumericAttributeResult,
+  isCategoricalAttribute,
   type AttributeComparisonResult,
   type ComparisonAttribute,
   type ComparisonResult,
 } from "@/types/comparison";
 import type { PlayerSearchCandidate } from "@/lib/player-search/types";
+import { getClubCrestUrl } from "@/lib/game/club-crests";
+import { getNationalityFlag } from "@/lib/game/nationality-flags";
 
 export interface ComparisonTableEntry {
   candidate: PlayerSearchCandidate;
@@ -67,22 +83,72 @@ function cellClassName(result: AttributeComparisonResult | undefined): string {
 }
 
 /**
- * Cell text content. A directional arrow is appended ONLY for a numeric
- * attribute (checked by name via {@link isNumericAttributeResult}, not by
- * the presence of `direction`) that carries a `direction` — i.e. only on a
- * mismatch where the underlying data was not `unavailable`.
+ * Cell content — renders the GUESSED player's actual value for the attribute
+ * (REQ-COMPARE-008/009), instead of a bare ✓/✗ symbol. The cell's
+ * correct/incorrect background color is driven entirely by
+ * {@link cellClassName} above; this function only decides WHAT is shown.
+ *
+ * `unavailable` is checked FIRST — before any attribute-specific branch — so
+ * an unavailable attribute never attempts to render a flag/crest/value it
+ * does not reliably have (D1/D2 plan-audit finding): it always falls
+ * through to the same neutral placeholder used pre-M13, regardless of
+ * attribute type.
  */
-function cellContent(result: AttributeComparisonResult | undefined): string {
+function cellContent(
+  attribute: ComparisonAttribute,
+  result: AttributeComparisonResult | undefined,
+  candidate: PlayerSearchCandidate,
+): ReactNode {
   if (!result || result.unavailable) {
     return "—";
   }
-  if (result.correct) {
-    return "✓";
+
+  if (isCategoricalAttribute(attribute)) {
+    switch (attribute) {
+      case "nationality": {
+        // REQ-COMPARE-010: a national flag; REQ-COMPARE-012 fallback to the
+        // raw nationality text when the value has no mapped flag.
+        const flag = getNationalityFlag(candidate.nationality);
+        return flag ?? candidate.nationality ?? "—";
+      }
+      case "club": {
+        // REQ-COMPARE-011: the club's emblem image; REQ-COMPARE-012
+        // fallback to the raw club name text when unmapped.
+        const crestUrl = getClubCrestUrl(candidate.club);
+        if (crestUrl) {
+          return (
+            <img
+              src={crestUrl}
+              alt={candidate.club ?? ""}
+              className="mx-auto h-5 w-5"
+            />
+          );
+        }
+        return candidate.club ?? "—";
+      }
+      case "position":
+        // Already the FW/MF/DF/GK text value — no lookup needed.
+        return candidate.position;
+    }
   }
-  if (isNumericAttributeResult(result) && result.direction) {
-    return result.direction === "higher" ? "✗ ↑" : "✗ ↓";
+
+  // Numeric attributes: age, squadNumber (REQ-COMPARE-009). A directional
+  // arrow is appended ONLY when `direction` is present (i.e. only on a
+  // mismatch where the underlying data was not `unavailable`).
+  if (isNumericAttributeResult(result)) {
+    const arrow = result.direction ? (result.direction === "higher" ? " ↑" : " ↓") : "";
+
+    if (attribute === "age") {
+      return candidate.age === null ? "—" : `${candidate.age}${arrow}`;
+    }
+
+    // squadNumber: a `null` value (distinct from `unavailable` — a guessed
+    // player who simply has no squad number registered) is treated the same
+    // as the unavailable neutral-placeholder case — never render "#null".
+    return candidate.squadNumber === null ? "—" : `#${candidate.squadNumber}${arrow}`;
   }
-  return "✗";
+
+  return "—";
 }
 
 export default function ComparisonTable({ entries }: ComparisonTableProps) {
@@ -128,7 +194,7 @@ export default function ComparisonTable({ entries }: ComparisonTableProps) {
                   data-testid={`cell-${index}-${attribute}`}
                   className={`border-b border-zinc-100 px-2 py-1 text-center dark:border-zinc-800 ${cellClassName(result)}`}
                 >
-                  {cellContent(result)}
+                  {cellContent(attribute, result, entry.candidate)}
                 </td>
               );
             })}

@@ -15,12 +15,21 @@
 
 import type { Position } from "@/types/player";
 
-/** The subset of `players` table columns this module reads (0001 migration). */
+/**
+ * The subset of `players` table columns this module reads (0001 migration).
+ *
+ * `nationality`/`age`/`squad_number` were added in SPEC-GAME-CORE-001 0.7.0
+ * (REQ-SEARCH-007, M13) — widening the same query that already read
+ * `id,name,club,position`, not a second query (see `search.ts`).
+ */
 export interface PlayerSearchRow {
   id: number;
   name: string;
   club: string | null;
   position: string;
+  nationality: string | null;
+  age: number | null;
+  squad_number: number | null;
 }
 
 interface PlayersSearchQueryResult {
@@ -77,6 +86,13 @@ export interface PlayerSearchSupabaseLike {
  * Deliberately small — only the fields a search/autocomplete UI (M10) and
  * the later guess-submission flow (M8) need, not the full `Player` shape
  * from `types/player.ts`.
+ *
+ * `nationality`/`age`/`squadNumber` were added in SPEC-GAME-CORE-001 0.7.0
+ * (REQ-SEARCH-007, M13) so the client has every value it needs to render the
+ * rich comparison-cell display (§B.9) immediately upon candidate selection,
+ * without an additional API call. These are the GUESSED player's own
+ * values, already known client-side at selection time — no new TARGET-player
+ * data is exposed (spec.md §D "Out of Scope — Target-Identity Data Exposure").
  */
 export interface PlayerSearchCandidate {
   id: string;
@@ -84,4 +100,7 @@ export interface PlayerSearchCandidate {
   koreanName: string;
   club: string | null;
   position: Position;
+  nationality: string | null;
+  age: number | null;
+  squadNumber: number | null;
 }

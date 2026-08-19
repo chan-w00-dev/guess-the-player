@@ -11,6 +11,9 @@ const CANDIDATES: PlayerSearchCandidate[] = [
     koreanName: "손흥민",
     club: "Tottenham",
     position: "FW",
+    nationality: "South Korea",
+    age: 33,
+    squadNumber: 7,
   },
 ];
 

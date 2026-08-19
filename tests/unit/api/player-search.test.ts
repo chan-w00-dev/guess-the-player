@@ -12,7 +12,16 @@ import { searchPlayers } from "@/lib/player-search/search";
 import { GET } from "@/app/api/player/search/route";
 
 const CANDIDATES: PlayerSearchCandidate[] = [
-  { id: "1", originalName: "Son Heung-min", koreanName: "손흥민", club: "Tottenham Hotspur", position: "FW" },
+  {
+    id: "1",
+    originalName: "Son Heung-min",
+    koreanName: "손흥민",
+    club: "Tottenham Hotspur",
+    position: "FW",
+    nationality: "South Korea",
+    age: 33,
+    squadNumber: 7,
+  },
 ];
 
 beforeEach(() => {

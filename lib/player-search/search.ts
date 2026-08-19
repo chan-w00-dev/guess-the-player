@@ -81,6 +81,9 @@ function toCandidate(row: PlayerSearchRow, koreanName: string): PlayerSearchCand
     koreanName,
     club: row.club,
     position: row.position,
+    nationality: row.nationality,
+    age: row.age,
+    squadNumber: row.squad_number,
   };
 }
 
@@ -121,7 +124,7 @@ export async function searchPlayers(
 
     const { data: matchedPlayers, error: playersError } = await supabase
       .from("players")
-      .select("id,name,club,position")
+      .select("id,name,club,position,nationality,age,squad_number")
       .in("name", originalNames);
 
     if (!playersError && matchedPlayers) {
@@ -143,7 +146,7 @@ export async function searchPlayers(
   // regression-preserving).
   const { data: originalRows, error: originalError } = await supabase
     .from("players")
-    .select("id,name,club,position")
+    .select("id,name,club,position,nationality,age,squad_number")
     .ilike("name", pattern);
 
   if (!originalError && originalRows) {

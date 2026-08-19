@@ -1,4 +1,4 @@
-import { describe, expect, it } from "vitest";
+import { describe, expect, it, vi } from "vitest";
 import { searchPlayers } from "@/lib/player-search/search";
 import type {
   KoreanMappingSearchRow,
@@ -120,13 +120,61 @@ function fakeKoreanMappingsTable(
 }
 
 const PLAYER_ROWS: PlayerSearchRow[] = [
-  { id: 1, name: "Son Heung-min", club: "Tottenham Hotspur", position: "FW" },
-  { id: 2, name: "Erling Haaland", club: "Manchester City", position: "FW" },
-  { id: 3, name: "John Doe", club: "Test FC", position: "MF" },
-  { id: 5, name: "Sonny", club: "Merge FC", position: "DF" },
-  { id: 77, name: "BadPosition", club: null, position: "XX" },
-  { id: 98, name: "Under_score", club: null, position: "GK" },
-  { id: 99, name: "Player%Percent", club: null, position: "DF" },
+  {
+    id: 1,
+    name: "Son Heung-min",
+    club: "Tottenham Hotspur",
+    position: "FW",
+    nationality: "South Korea",
+    age: 33,
+    squad_number: 7,
+  },
+  {
+    id: 2,
+    name: "Erling Haaland",
+    club: "Manchester City",
+    position: "FW",
+    nationality: "Norway",
+    age: 25,
+    squad_number: 9,
+  },
+  {
+    id: 3,
+    name: "John Doe",
+    club: "Test FC",
+    position: "MF",
+    nationality: "USA",
+    age: 27,
+    squad_number: 10,
+  },
+  {
+    id: 5,
+    name: "Sonny",
+    club: "Merge FC",
+    position: "DF",
+    nationality: "England",
+    age: 24,
+    squad_number: 4,
+  },
+  { id: 77, name: "BadPosition", club: null, position: "XX", nationality: null, age: null, squad_number: null },
+  {
+    id: 98,
+    name: "Under_score",
+    club: null,
+    position: "GK",
+    nationality: null,
+    age: null,
+    squad_number: null,
+  },
+  {
+    id: 99,
+    name: "Player%Percent",
+    club: null,
+    position: "DF",
+    nationality: null,
+    age: null,
+    squad_number: null,
+  },
 ];
 
 const MAPPING_ROWS: KoreanMappingSearchRow[] = [
@@ -171,6 +219,9 @@ describe("searchPlayers — Korean-language partial match (REQ-SEARCH-001, 002, 
         koreanName: "손흥민",
         club: "Tottenham Hotspur",
         position: "FW",
+        nationality: "South Korea",
+        age: 33,
+        squadNumber: 7,
       },
     ]);
   });
@@ -187,6 +238,9 @@ describe("searchPlayers — Korean-language partial match (REQ-SEARCH-001, 002, 
         koreanName: "홀란드",
         club: "Manchester City",
         position: "FW",
+        nationality: "Norway",
+        age: 25,
+        squadNumber: 9,
       },
     ]);
   });
@@ -205,6 +259,9 @@ describe("searchPlayers — original-language / romanized partial match (REQ-SEA
         koreanName: "홀란드",
         club: "Manchester City",
         position: "FW",
+        nationality: "Norway",
+        age: 25,
+        squadNumber: 9,
       },
     ]);
   });
@@ -221,6 +278,9 @@ describe("searchPlayers — original-language / romanized partial match (REQ-SEA
         koreanName: "John Doe",
         club: "Test FC",
         position: "MF",
+        nationality: "USA",
+        age: 27,
+        squadNumber: 10,
       },
     ]);
   });
@@ -247,6 +307,9 @@ describe("searchPlayers — merge and de-duplicate across both match paths (plan
       koreanName: "Sonny-KR",
       club: "Merge FC",
       position: "DF",
+      nationality: "England",
+      age: 24,
+      squadNumber: 4,
     });
   });
 });
@@ -264,6 +327,9 @@ describe("searchPlayers — input sanitization at the search boundary (plan.md �
         koreanName: "Player%Percent",
         club: null,
         position: "DF",
+        nationality: null,
+        age: null,
+        squadNumber: null,
       },
     ]);
   });
@@ -280,6 +346,9 @@ describe("searchPlayers — input sanitization at the search boundary (plan.md �
         koreanName: "Under_score",
         club: null,
         position: "GK",
+        nationality: null,
+        age: null,
+        squadNumber: null,
       },
     ]);
   });
@@ -325,5 +394,64 @@ describe("searchPlayers — Korean-path vs original-path equivalence (REQ-SEARCH
     expect(viaKorean).toHaveLength(1);
     expect(viaOriginal).toHaveLength(1);
     expect(viaKorean[0]).toEqual(viaOriginal[0]);
+  });
+});
+
+describe("searchPlayers — REQ-SEARCH-007 widened fields sourced from a single query, no new API call (M13 D3)", () => {
+  it("populates nationality/age/squadNumber from the SAME players-table select() call that already fetched id/name/club/position — the original-language match path makes exactly 1 players-table call, unchanged from before this milestone", async () => {
+    const playersTable = fakePlayersTable(PLAYER_ROWS);
+    const selectSpy = vi.spyOn(playersTable, "select");
+    const mappingsTable = fakeKoreanMappingsTable(MAPPING_ROWS);
+    const supabase: PlayerSearchSupabaseLike = {
+      from(table: "players" | "korean_name_mappings") {
+        return table === "players" ? playersTable : mappingsTable;
+      },
+    } as PlayerSearchSupabaseLike;
+
+    // "Haaland" matches no Korean-name mapping, so only the original-language
+    // branch queries the `players` table — exactly 1 select() call, the same
+    // single call this branch has always made (REQ-SEARCH-003, pre-M13). No
+    // second/dedicated query was added to fetch the widened fields.
+    const results = await searchPlayers("Haaland", { supabase });
+
+    expect(selectSpy).toHaveBeenCalledTimes(1);
+    expect(results).toEqual([
+      {
+        id: "2",
+        originalName: "Erling Haaland",
+        koreanName: "홀란드",
+        club: "Manchester City",
+        position: "FW",
+        nationality: "Norway",
+        age: 25,
+        squadNumber: 9,
+      },
+    ]);
+  });
+
+  it("populates nationality/age/squadNumber from the Korean-match path's players-table select() call — still exactly the same 2-call total (Korean .in() + original .ilike()) this query has always made, no third call added", async () => {
+    const playersTable = fakePlayersTable(PLAYER_ROWS);
+    const selectSpy = vi.spyOn(playersTable, "select");
+    const mappingsTable = fakeKoreanMappingsTable(MAPPING_ROWS);
+    const supabase: PlayerSearchSupabaseLike = {
+      from(table: "players" | "korean_name_mappings") {
+        return table === "players" ? playersTable : mappingsTable;
+      },
+    } as PlayerSearchSupabaseLike;
+
+    // "손흥" matches a Korean-name mapping (triggering the Korean-path
+    // players.in() call) AND, unconditionally, the original-language
+    // players.ilike() call also runs (REQ-SEARCH-003 regression-preserving)
+    // — 2 total players-table calls, the same count this dual-path design
+    // has always made since M6. The widened fields ride the SAME .in() call
+    // that already resolved id/name/club/position for the Korean match.
+    const results = await searchPlayers("손흥", { supabase });
+
+    expect(selectSpy).toHaveBeenCalledTimes(2);
+    expect(results[0]).toMatchObject({
+      nationality: "South Korea",
+      age: 33,
+      squadNumber: 7,
+    });
   });
 });

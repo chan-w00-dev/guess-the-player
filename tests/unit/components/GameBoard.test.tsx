@@ -18,6 +18,9 @@ const CANDIDATE: PlayerSearchCandidate = {
   koreanName: "부카요 사카",
   club: "Arsenal",
   position: "MF",
+  nationality: "England",
+  age: 23,
+  squadNumber: 7,
 };
 
 vi.mock("@/components/GuessSearchInput", () => ({
