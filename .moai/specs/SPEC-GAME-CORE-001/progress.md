@@ -933,7 +933,7 @@ frontmatter field.
 
 ```yaml
 sync_complete_at: 2026-08-19
-sync_commit_sha: pending-backfill-0.7.0-sync
+sync_commit_sha: c4a5a00
 sync_status: complete
 changelog_entry_position: "new dated 0.2.0 entry, above the existing 0.1.0 entry (most-recent-first)"
 frontmatter_status_transitions:
