@@ -109,7 +109,7 @@ function cellContent(
         // REQ-COMPARE-010: a national flag; REQ-COMPARE-012 fallback to the
         // raw nationality text when the value has no mapped flag.
         const flag = getNationalityFlag(candidate.nationality);
-        return flag ?? candidate.nationality ?? "—";
+        return flag ? <span className="text-2xl leading-none">{flag}</span> : (candidate.nationality ?? "—");
       }
       case "club": {
         // REQ-COMPARE-011: the club's emblem image; REQ-COMPARE-012
@@ -120,7 +120,7 @@ function cellContent(
             <img
               src={crestUrl}
               alt={candidate.club ?? ""}
-              className="mx-auto h-5 w-5"
+              className="h-8 w-8 object-contain"
             />
           );
         }
@@ -192,9 +192,11 @@ export default function ComparisonTable({ entries }: ComparisonTableProps) {
                 <td
                   key={attribute}
                   data-testid={`cell-${index}-${attribute}`}
-                  className={`border-b border-zinc-100 px-2 py-1 text-center dark:border-zinc-800 ${cellClassName(result)}`}
+                  className={`border-b border-zinc-100 px-2 py-1 text-center align-middle dark:border-zinc-800 ${cellClassName(result)}`}
                 >
-                  {cellContent(attribute, result, entry.candidate)}
+                  <span className="flex items-center justify-center gap-1">
+                    {cellContent(attribute, result, entry.candidate)}
+                  </span>
                 </td>
               );
             })}
