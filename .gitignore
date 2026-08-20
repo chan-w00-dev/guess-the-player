@@ -220,11 +220,13 @@ secret-*.*
 !.moai/evolution/telemetry/.gitkeep
 
 # ===========================================
-# SPEC-GAME-CORE-001 M12 — generated review-export CSV artifact
-# (data/korean-name-seed.json remains tracked seed data; this file is a
-# locally-generated review export, not committed seed data)
+# SPEC-GAME-CORE-001 M12 — generated review-export/import CSV workflow files
+# (data/korean-name-seed.json remains tracked seed data; anything under the
+# player-review-* prefix is a locally-generated working file, not committed
+# seed data — covers the export CSV, hand-edited copies (.xlsx, cleaned
+# re-import CSVs), and similar future variants)
 # ===========================================
-data/player-review-export.csv
+data/player-review-*
 
 # ===========================================
 # Node.js (for docs/Nextra)
